@@ -1,0 +1,952 @@
+import { useState, useEffect, useRef } from "react";
+
+/* ═══════════════════════════════════════
+   BABYTRACK v5 — Fixed & Complete
+   ═══════════════════════════════════════ */
+
+const FAMILY_ROLES = [
+  { id: "papa", l: "Papá", e: "👨" }, { id: "mama", l: "Mamá", e: "👩" },
+  { id: "abuela", l: "Abuela", e: "👵" }, { id: "abuelo", l: "Abuelo", e: "👴" },
+  { id: "tia", l: "Tía/Tío", e: "🧑" }, { id: "nanny", l: "Niñera", e: "👤" },
+  { id: "other", l: "Otro", e: "👤" },
+];
+const TASK_CATS = [
+  { id: "medical", l: "Cita médica", e: "🏥", c: "#EF4444" },
+  { id: "vaccine", l: "Vacuna", e: "💉", c: "#8B5CF6" },
+  { id: "medicine", l: "Medicamento", e: "💊", c: "#F59E0B" },
+  { id: "shopping", l: "Compras", e: "🛒", c: "#10B981" },
+  { id: "feeding", l: "Alimentación", e: "🍼", c: "#F9A8D4" },
+  { id: "general", l: "General", e: "📋", c: "#6B7280" },
+];
+const TASK_REPEAT = [{ id: "once", l: "Una vez" },{ id: "daily", l: "Diario" },{ id: "weekly", l: "Semanal" },{ id: "monthly", l: "Mensual" }];
+
+const PERMS_LIST = [
+  { id: "reg_feed", l: "Registrar alimentación", cat: "🍼" },
+  { id: "reg_diaper", l: "Registrar pañales", cat: "🧷" },
+  { id: "reg_sleep", l: "Registrar sueño", cat: "😴" },
+  { id: "reg_temp", l: "Registrar temperatura", cat: "🌡️" },
+  { id: "reg_growth", l: "Registrar peso/talla", cat: "📏" },
+  { id: "view_history", l: "Ver historial completo", cat: "📊" },
+  { id: "view_today", l: "Ver resumen del día", cat: "📋" },
+  { id: "view_milestones", l: "Ver hitos", cat: "🌟" },
+  { id: "use_ai", l: "Usar asistente IA", cat: "🤖" },
+  { id: "ask_questions", l: "Hacer preguntas al pediatra", cat: "❓" },
+  { id: "view_questions", l: "Ver historial de preguntas", cat: "📝" },
+  { id: "export_data", l: "Exportar datos", cat: "📥" },
+  { id: "manage_family", l: "Gestionar familia", cat: "👨‍👩‍👧" },
+];
+const ROLE_DEFAULTS = {
+  admin: PERMS_LIST.map(p => p.id),
+  cuidador: ["reg_feed", "reg_diaper", "reg_sleep", "reg_temp", "view_today", "view_milestones", "use_ai", "ask_questions", "view_questions"],
+  observador: ["view_today", "view_milestones", "view_questions"],
+};
+const ROLES = [
+  { id: "admin", l: "Admin", e: "👑" },
+  { id: "cuidador", l: "Cuidador", e: "🤲" },
+  { id: "observador", l: "Observador", e: "👀" },
+];
+const FT = [{ id: "breast", l: "Materna", e: "🤱", c: "#F9A8D4" }, { id: "formula", l: "Fórmula", e: "🍼", c: "#7DD3FC" }, { id: "mixed", l: "Mixta", e: "🫧", c: "#C4B5FD" }];
+const DTP = [{ id: "pee", l: "Pipí", e: "💧", c: "#7DD3FC" }, { id: "poo", l: "Popó", e: "💩", c: "#FDBA74" }, { id: "both", l: "Ambos", e: "✨", c: "#A78BFA" }];
+const PCL = [{ id: "yellow", l: "Amarillo", h: "#FBBF24" }, { id: "green", l: "Verde", h: "#34D399" }, { id: "brown", l: "Café", h: "#A16207" }, { id: "dark", l: "Oscuro", h: "#44403C" }];
+const PCN = [{ id: "liquid", l: "Líquida" }, { id: "soft", l: "Blanda" }, { id: "normal", l: "Normal" }, { id: "hard", l: "Dura" }];
+const ALL_MS = {
+  "0-3 meses": [
+    { id: "lifts_head", l: "Levanta la cabeza", e: "💪", m: 1, info: "Boca abajo levanta brevemente la cabeza. Practica tummy time 2-3 min." },
+    { id: "focus", l: "Enfoca objetos cercanos", e: "👀", m: 1, info: "Enfoca a 20-30cm. Normal que ojos se crucen." },
+    { id: "social_smile", l: "Sonrisa social", e: "😊", m: 2, info: "Primera sonrisa en respuesta a tu cara." },
+    { id: "coos", l: "Gorjeos y sonidos", e: "🗣️", m: 2, info: "Sonidos suaves. Respóndele para estimular." },
+    { id: "follows_180", l: "Sigue objetos 180°", e: "🔄", m: 3, info: "Sigue un objeto de lado a lado." },
+    { id: "head_ctrl", l: "Cabeza firme", e: "💪", m: 3, info: "Cargado vertical mantiene cabeza estable." },
+  ],
+  "3-6 meses": [
+    { id: "grabs", l: "Agarra objetos", e: "🤲", m: 4, info: "Extiende la mano y agarra juguetes." },
+    { id: "rolls_f", l: "Se voltea", e: "🔄", m: 4, info: "Primer giro. ¡Nunca solo en superficies altas!" },
+    { id: "laughs", l: "Ríe a carcajadas", e: "😂", m: 4, info: "Risa social, desarrollo emocional saludable." },
+    { id: "recog", l: "Reconoce padres", e: "👨‍👩‍👧", m: 4, info: "Preferencia clara por caras familiares." },
+    { id: "reaches", l: "Estira brazos", e: "🙌", m: 5, info: "Quiere que la carguen." },
+    { id: "sits_s", l: "Se sienta con apoyo", e: "🪑", m: 5, info: "Con cojines o tus manos." },
+    { id: "babbles", l: "Balbucea", e: "👄", m: 6, info: "Ba-ba, da-da. Repítelos." },
+    { id: "solid_int", l: "Interés en sólidos", e: "🥄", m: 6, info: "Mira tu comida, consulta pediatra." },
+  ],
+  "6-9 meses": [
+    { id: "sits_a", l: "Se sienta solo", e: "🪑", m: 7, info: "Sin apoyo." },
+    { id: "pincer_e", l: "Pinza temprana", e: "🤏", m: 7, info: "Pulgar e índice." },
+    { id: "stranger", l: "Ansiedad extraños", e: "😰", m: 8, info: "Normal y saludable." },
+    { id: "crawls", l: "Gatea", e: "🐛", m: 8, info: "Todo estilo es normal." },
+    { id: "pulls", l: "Se para agarrándose", e: "🧗", m: 9, info: "Asegura muebles." },
+    { id: "waves", l: "Dice adiós", e: "👋", m: 9, info: "Imitación social." },
+  ],
+  "9-12 meses": [
+    { id: "mama_m", l: "Mamá/papá con significado", e: "❤️", m: 10, info: "¡Sabe quién es quién!" },
+    { id: "cruises", l: "Camina con muebles", e: "🚶", m: 10, info: "Pre-caminar." },
+    { id: "points", l: "Señala con dedo", e: "👆", m: 11, info: "Comunicación intencional." },
+    { id: "steps", l: "Primeros pasos", e: "🚶‍♂️", m: 12, info: "9-18 meses es normal." },
+    { id: "words", l: "2-3 palabras", e: "💬", m: 12, info: "Entiende mucho más." },
+  ],
+};
+const REC = [
+  { id: "feed", l: "Alimentación", e: "🍼", c: "#F9A8D4", d: "Leche", p: "reg_feed" },
+  { id: "diaper", l: "Pañal", e: "🧷", c: "#7DD3FC", d: "Pipí/popó", p: "reg_diaper" },
+  { id: "sleep", l: "Sueño", e: "😴", c: "#C4B5FD", d: "Cronómetro", p: "reg_sleep" },
+  { id: "temp", l: "Temperatura", e: "🌡️", c: "#FCA5A5", d: "Fiebre", p: "reg_temp" },
+  { id: "growth", l: "Peso/Talla", e: "📏", c: "#6EE7B7", d: "Crecimiento", p: "reg_growth" },
+];
+const TIPS = ["24-32oz al día para 3-6 meses.", "Bebés duermen 12-16h total.", "Deposiciones cambian de color, es normal.", "Contacto piel a piel sigue siendo beneficioso.", "Menos de 6 pañales mojados → pediatra.", "Duplican peso al nacer ~4-5 meses.", "Hablarle estimula lenguaje.", "Temp normal: 36.1-37.2°C.", "A los 4 meses se voltean — ¡cuidado!", "Llanto = comunicación.", "Cluster feeding es normal en brotes.", "Cada bebé tiene su ritmo."];
+
+// Age-based goals (AAP/OMS references)
+const GOALS = {
+  "0-3 meses": { ozMin: 16, ozMax: 24, ozLabel: "16-24oz", sleepMin: 14, sleepMax: 17, sleepLabel: "14-17h", naps: "4-5 siestas", wetMin: 6, wetMax: 10, wetLabel: "6-10", pooFreq: "3-4/día o más", pooNote: "Normal: frecuente y líquido" },
+  "3-6 meses": { ozMin: 24, ozMax: 32, ozLabel: "24-32oz", sleepMin: 12, sleepMax: 16, sleepLabel: "12-16h", naps: "3-4 siestas", wetMin: 6, wetMax: 8, wetLabel: "6-8", pooFreq: "1-3/día", pooNote: "Normal: puede espaciarse" },
+  "6-9 meses": { ozMin: 24, ozMax: 32, ozLabel: "24-32oz", sleepMin: 12, sleepMax: 15, sleepLabel: "12-15h", naps: "2-3 siestas", wetMin: 4, wetMax: 6, wetLabel: "4-6", pooFreq: "1-2/día", pooNote: "Cambia con sólidos" },
+  "9-12 meses": { ozMin: 16, ozMax: 24, ozLabel: "16-24oz", sleepMin: 12, sleepMax: 14, sleepLabel: "12-14h", naps: "2 siestas", wetMin: 4, wetMax: 6, wetLabel: "4-6", pooFreq: "1-2/día", pooNote: "Más consistente" },
+};
+const QQS = ["¿Va bien hoy?", "¿Cuántas oz al día?", "¿Pañales normales?", "¿Duerme suficiente?", "¿Temperatura ok?", "¿Peso va bien?", "¿Qué hitos vienen?", "Resumen del día", "¿Algo preocupante?", "Tips para dormir", "¿Cuándo sólidos?", "¿Normal regurgitar?"];
+
+const calcAge = (bd) => {
+  if (!bd) return null;
+  try {
+    const b = new Date(bd); const now = new Date();
+    const months = (now.getFullYear() - b.getFullYear()) * 12 + (now.getMonth() - b.getMonth());
+    const days = now.getDate() - b.getDate();
+    const m = days < 0 ? months - 1 : months;
+    return { months: Math.max(0, m), days: Math.max(0, Math.floor((now - b) / 864e5)) };
+  } catch { return null; }
+};
+const ageToRange = (bd) => {
+  const a = calcAge(bd); if (!a) return null;
+  if (a.months < 3) return "0-3 meses";
+  if (a.months < 6) return "3-6 meses";
+  if (a.months < 9) return "6-9 meses";
+  return "9-12 meses";
+};
+const fmtAge = (bd) => {
+  const a = calcAge(bd); if (!a) return "";
+  if (a.months === 0) return `${a.days} día${a.days !== 1 ? "s" : ""}`;
+  if (a.months < 12) return `${a.months} mes${a.months !== 1 ? "es" : ""}${a.days > 0 ? ` y ${a.days % 30} días` : ""}`;
+  const y = Math.floor(a.months / 12); const rm = a.months % 12;
+  return `${y} año${y > 1 ? "s" : ""}${rm ? ` y ${rm} mes${rm > 1 ? "es" : ""}` : ""}`;
+};
+const fmt = d => { try { return new Date(d).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" }); } catch { return ""; } };
+const fD = d => { try { return new Date(d).toLocaleDateString("es", { weekday: "short", day: "numeric", month: "short" }); } catch { return ""; } };
+const rel = d => { try { const m = Math.floor((Date.now() - new Date(d)) / 6e4); if (m < 1) return "Ahora"; if (m < 60) return `${m}m`; const h = Math.floor(m / 60); return h < 24 ? `${h}h` : `${Math.floor(h / 24)}d`; } catch { return ""; } };
+const fSec = s => { const m = Math.floor(s / 60); return `${m}:${(s % 60).toString().padStart(2, "0")}`; };
+const gc = () => Math.random().toString(36).substring(2, 8).toUpperCase();
+const fDShort = d => { try { return new Date(d).toLocaleDateString("es", { day: "numeric", month: "short" }); } catch { return ""; } };
+const isToday = d => { try { return new Date(d).toDateString() === new Date().toDateString(); } catch { return false; } };
+const isPastDate = d => { try { const t = new Date(d); t.setHours(23,59); return t < new Date() && !isToday(d); } catch { return false; } };
+
+// Single prefix for all keys — v8 fresh start
+
+export default function BabyTrack({ auth, data }) {
+  // auth = { user, profile, signOut, updateProfile }
+  // data = { baby, entries, tasks, milestones, questions, aiMessages, members, invitations, ...actions }
+  const [ready, setReady] = useState(true);
+  const [ob, setOb] = useState(!!data.baby);
+  const [obS, setObS] = useState(0);
+  const [dark, setDark] = useState(false);
+  const [view, setView] = useState("home");
+  const [sub, setSub] = useState(null);
+  const [prof, setProf] = useState(data.baby ? { name: data.baby.name, ageRange: data.baby.age_range || "3-6 meses", gender: data.baby.gender || "female", birthDate: data.baby.birth_date || "" } : { name: "", ageRange: "3-6 meses", gender: "female", birthDate: "" });
+  const [photo, setPhoto] = useState(data.baby?.photo_url || null);
+  // Entries come from Supabase via data prop — mapped to local format
+  const mapEntry = e => ({ id: e.id, type: e.type, ts: e.recorded_at, by: e.recorded_by, ...e.data });
+  const [ent, setEnt] = useState((data.entries || []).map(mapEntry));
+  const [qs, setQs] = useState((data.questions || []).map(q => ({ id: q.id, text: q.text, status: q.status, by: q.asked_by, ts: q.created_at })));
+  const [msDone, setMsDone] = useState((data.milestones || []).map(m => ({ id: m.milestone_id, at: m.achieved_at, dbId: m.id })));
+  const [aiMsgs, setAiMsgs] = useState((data.aiMessages || []).map(m => ({ role: m.role, text: m.text })));
+  const [aiIn, setAiIn] = useState("");
+  const [aiL, setAiL] = useState(false);
+  const [nq, setNq] = useState("");
+  const [ok, setOk] = useState(false);
+  const [okM, setOkM] = useState("");
+  const [rem, setRem] = useState([]);
+  const [mem, setMem] = useState((data.members||[]).map(m=>({id:m.id,name:m.name,role:m.app_role,familyRole:m.family_role,perms:m.perms||ROLE_DEFAULTS[m.app_role]||[],at:m.created_at})));
+  const [inv, setInv] = useState((data.invitations||[]).map(i=>({id:i.id,code:i.code,name:i.name,role:i.role,perms:i.perms||[],status:i.status})));
+  const [cu, setCu] = useState({name:auth.profile?.name||"Yo",role:auth.profile?.app_role||"admin",perms:auth.profile?.perms||ROLE_DEFAULTS.admin,familyRole:auth.profile?.family_role||"papa"});
+  const [showRemF, setShowRemF] = useState(false);
+  const [remTxt, setRemTxt] = useState("");
+  const [remTm, setRemTm] = useState("");
+  const [tasks, setTasks] = useState((data.tasks||[]).map(t=>({id:t.id,title:t.title,date:t.date,time:t.time,cat:t.category,assignee:t.assignee,repeat:t.repeat,notes:t.notes,done:t.done,doneAt:t.done_at,by:t.created_by})));
+  const [tF_show, setTFShow] = useState(false);
+  const [tF_title, setTFTitle] = useState("");
+  const [tF_date, setTFDate] = useState("");
+  const [tF_time, setTFTime] = useState("");
+  const [tF_cat, setTFCat] = useState("general");
+  const [tF_assign, setTFAssign] = useState("");
+  const [tF_repeat, setTFRepeat] = useState("once");
+  const [tF_notes, setTFNotes] = useState("");
+  const [taskTab, setTaskTab] = useState("pending");
+  const [quickM, setQuickM] = useState(false);
+  const [msD, setMsD] = useState(null);
+  const [slpA, setSlpA] = useState(null);
+  const [slpE, setSlpE] = useState(0);
+  const [invR, setInvR] = useState("cuidador");
+  const [invN, setInvN] = useState("");
+  const [invPerms, setInvPerms] = useState([...ROLE_DEFAULTS.cuidador]);
+  const [invStep, setInvStep] = useState(0); // 0=form, 1=perms, 2=done
+  const [editM, setEditM] = useState(null);
+  const [cropSrc, setCropSrc] = useState(null);
+  const [cropScale, setCropScale] = useState(1);
+  const [cropOx, setCropOx] = useState(0);
+  const [cropOy, setCropOy] = useState(0);
+  const cropCanvasRef = useRef(null);
+  const chatRef = useRef(null);
+  const fileRef = useRef(null);
+  const [fTy, setFTy] = useState("formula");
+  const [fOz, setFOz] = useState(4);
+  const [fNo, setFNo] = useState("");
+  const [fTs, setFTs] = useState("");
+  const [dTy, setDTy] = useState("pee");
+  const [pCo, setPCo] = useState("yellow");
+  const [pCn, setPCn] = useState("normal");
+  const [tmp, setTmp] = useState(36.5);
+  const [wK, setWK] = useState("");
+  const [hC, setHC] = useState("");
+  const [gDate, setGDate] = useState("");
+
+  // AUTO-SAVE to Supabase when profile changes
+  useEffect(() => {
+    if (prof.birthDate) {
+      const r = ageToRange(prof.birthDate);
+      if (r && r !== prof.ageRange) { setProf(p => ({ ...p, ageRange: r })); return; }
+    }
+    // Save baby profile to Supabase
+    if (ob && data.saveBaby) {
+      data.saveBaby({ name: prof.name, gender: prof.gender, birth_date: prof.birthDate || null, age_range: prof.ageRange, photo_url: photo });
+    }
+  }, [prof, photo]);
+
+  // Sleep timer
+  useEffect(() => {
+    if (!slpA) { setSlpE(0); return; }
+    const iv = setInterval(() => setSlpE(Math.floor((Date.now() - new Date(slpA.at)) / 1000)), 1000);
+    return () => clearInterval(iv);
+  }, [slpA]);
+
+  useEffect(() => { chatRef.current?.scrollIntoView({ behavior: "smooth" }); }, [aiMsgs, aiL]);
+
+  // Helpers
+  const hp = p => cu.perms?.includes(p) || cu.role === "admin";
+  const milestones = ALL_MS[prof.ageRange] || ALL_MS["3-6 meses"];
+  const goals = GOALS[prof.ageRange] || GOALS["3-6 meses"];
+  const today = new Date().toDateString();
+  const tE = ent.filter(e => { try { return new Date(e.ts).toDateString() === today; } catch { return false; } });
+
+  // FEEDING stats
+  const tF = tE.filter(e => e.type === "feed");
+  const tOz = tF.reduce((s, e) => s + (e.oz || 0), 0);
+  const feedPct = Math.min(100, Math.round((tOz / goals.ozMin) * 100));
+  const feedStatus = tOz >= goals.ozMin ? "ok" : tOz >= goals.ozMin * 0.6 ? "warn" : "low";
+  const lF = [...ent].filter(e => e.type === "feed").pop();
+  const l7 = ent.filter(e => { try { return Date.now() - new Date(e.ts) < 7 * 864e5; } catch { return false; } });
+  const a7 = l7.filter(e => e.type === "feed").length ? Math.round(l7.filter(e => e.type === "feed").reduce((s, e) => s + (e.oz || 0), 0) / 7 * 10) / 10 : 0;
+
+  // SLEEP stats
+  const tSl = tE.filter(e => e.type === "sleep");
+  const tSlMin = tSl.reduce((s, e) => s + (e.duration || 0), 0);
+  const tSlH = Math.round(tSlMin / 6) / 10; // hours with 1 decimal
+  const sleepGoalH = goals.sleepMin;
+  const sleepPct = Math.min(100, Math.round((tSlH / sleepGoalH) * 100));
+  const sleepStatus = tSlH >= sleepGoalH ? "ok" : tSlH >= sleepGoalH * 0.5 ? "warn" : "low";
+  const hoursLeft = Math.max(0, Math.round((sleepGoalH - tSlH) * 10) / 10);
+  const hr = new Date().getHours();
+  const sleepTip = tSlH >= sleepGoalH ? "¡Meta cumplida! 🎉" : hr < 14 ? `Necesita ${hoursLeft}h más (siestas + noche)` : hr < 19 ? `Faltan ${hoursLeft}h — necesita buena noche` : `Necesita ~${hoursLeft}h de noche`;
+
+  // DIAPER stats
+  const tD = tE.filter(e => e.type === "diaper").length;
+  const tWet = tE.filter(e => e.type === "diaper" && (e.diaperType === "pee" || e.diaperType === "both")).length;
+  const tPoo = tE.filter(e => e.type === "diaper" && (e.diaperType === "poo" || e.diaperType === "both")).length;
+  const wetPct = Math.min(100, Math.round((tWet / goals.wetMin) * 100));
+  const wetStatus = tWet >= goals.wetMin ? "ok" : tWet >= goals.wetMin * 0.5 ? "warn" : "low";
+
+  // OTHER
+  const lG = [...ent].filter(e => e.type === "growth").pop();
+  const lT = [...ent].filter(e => e.type === "temp").pop();
+  const tipDay = TIPS[Math.floor(Date.now() / 864e5) % TIPS.length];
+
+  // Tasks computed
+  const pendingTasks = tasks.filter(t => !t.done).sort((a, b) => (a.date || "9").localeCompare(b.date || "9"));
+  const todayTasks = pendingTasks.filter(t => t.date && isToday(t.date));
+  const overdueTasks = pendingTasks.filter(t => t.date && isPastDate(t.date));
+  const myTasks = pendingTasks.filter(t => !t.assignee || t.assignee === cu.name);
+  const doneTasks = tasks.filter(t => t.done);
+
+  // SMART ALERTS
+  const alerts = [];
+  // Feeding alerts
+  if (lF) { try { const hSince = Math.floor((Date.now() - new Date(lF.ts)) / 36e5); if (hSince > 4) alerts.push({ t: "warn", m: `🍼 ${hSince}h sin comer` }); } catch {} }
+  if (tF.length >= 2 && tOz < goals.ozMin * 0.4 && hr > 14) alerts.push({ t: "warn", m: `🍼 Solo ${tOz}oz — meta: ${goals.ozLabel}` });
+  // Sleep alerts
+  if (hr > 12 && tSlH < 1 && !slpA) alerts.push({ t: "warn", m: `😴 Sin siestas hoy — meta: ${goals.naps}` });
+  if (hr > 18 && tSlH < sleepGoalH * 0.3) alerts.push({ t: "warn", m: `😴 Solo ${tSlH}h de ${sleepGoalH}h meta` });
+  // Diaper alerts
+  if (hr > 14 && tWet < 3) alerts.push({ t: "warn", m: `🧷 Solo ${tWet} pipí — meta: ${goals.wetLabel}/día` });
+  if (hr > 18 && tWet < goals.wetMin) alerts.push({ t: "danger", m: `🧷 ${tWet} mojados — puede indicar deshidratación` });
+  // Temp
+  if (lT?.temp >= 38) alerts.push({ t: "danger", m: `🌡️ Temp: ${lT.temp}°C — fiebre` });
+  if (overdueTasks.length > 0) alerts.push({ t: "warn", m: `📌 ${overdueTasks.length} tarea(s) vencida(s)` });
+
+  // DAILY SCORE (0-100)
+  const feedScore = Math.min(30, Math.round((tOz / goals.ozMin) * 30)); // 0-30
+  const sleepScore = Math.min(30, Math.round((tSlH / sleepGoalH) * 30)); // 0-30
+  const wetScore = Math.min(20, Math.round((tWet / goals.wetMin) * 20)); // 0-20
+  const tempScore = (!lT || lT.temp < 37.5) ? 10 : lT.temp < 38 ? 5 : 0; // 0-10
+  const alertPenalty = Math.min(10, alerts.filter(a => a.t === "danger").length * 5 + alerts.filter(a => a.t === "warn").length * 2); // penalty
+  const dailyScore = Math.max(0, Math.min(100, feedScore + sleepScore + wetScore + tempScore - alertPenalty));
+  const scoreColor = dailyScore >= 80 ? "#10B981" : dailyScore >= 60 ? "#F59E0B" : dailyScore >= 40 ? "#F97316" : "#EF4444";
+  const scoreEmoji = dailyScore >= 80 ? "🌟" : dailyScore >= 60 ? "👍" : dailyScore >= 40 ? "⚠️" : "😟";
+  const scoreLabel = dailyScore >= 80 ? "¡Excelente día!" : dailyScore >= 60 ? "Va bien" : dailyScore >= 40 ? "Puede mejorar" : "Necesita atención";
+  const hasData = tF.length > 0 || tSl.length > 0 || tD > 0;
+
+  const flash = m => { setOkM(m); setOk(true); setTimeout(() => { setOk(false); setSub(null); if (view !== "family" && view !== "reminders") setView("home"); }, 900); };
+  const gTs = c => { try { return c ? new Date(c).toISOString() : new Date().toISOString(); } catch { return new Date().toISOString(); } };
+
+  const addFeed = () => { const entry = { id: Date.now(), type: "feed", feedType: fTy, oz: fOz, notes: fNo, by: cu.name, ts: gTs(fTs) }; setEnt(p => [...p, entry]); data.addEntry({ type: "feed", data: { feedType: fTy, oz: fOz, notes: fNo }, by: cu.name, ts: gTs(fTs) }); setFOz(4); setFNo(""); setFTs(""); flash("Toma ✓"); };
+  const addDiaper = () => { const d = { diaperType: dTy, ...(dTy !== "pee" ? { pooColor: pCo, pooCon: pCn } : {}) }; const entry = { id: Date.now(), type: "diaper", ...d, by: cu.name, ts: gTs() }; setEnt(p => [...p, entry]); data.addEntry({ type: "diaper", data: d, by: cu.name }); flash("Pañal ✓"); };
+  const startSlp = ty => setSlpA({ type: ty, at: new Date().toISOString() });
+  const stopSlp = () => { if (!slpA) return; const dur = Math.floor((Date.now() - new Date(slpA.at)) / 6e4); const entry = { id: Date.now(), type: "sleep", sleepType: slpA.type, duration: dur, by: cu.name, ts: slpA.at }; setEnt(p => [...p, entry]); data.addEntry({ type: "sleep", data: { sleepType: slpA.type, duration: dur }, by: cu.name, ts: slpA.at }); setSlpA(null); flash(`${dur}min ✓`); };
+  const addTemp = () => { const entry = { id: Date.now(), type: "temp", temp: tmp, by: cu.name, ts: gTs() }; setEnt(p => [...p, entry]); data.addEntry({ type: "temp", data: { temp: tmp }, by: cu.name }); flash("Temp ✓"); };
+  const addGrowth = () => { const entry = { id: Date.now(), type: "growth", weight: wK ? +wK : null, height: hC ? +hC : null, by: cu.name, ts: gTs(gDate || null) }; setEnt(p => [...p, entry]); data.addEntry({ type: "growth", data: { weight: wK ? +wK : null, height: hC ? +hC : null }, by: cu.name, ts: gTs(gDate || null) }); setWK(""); setHC(""); setGDate(""); flash("Medidas ✓"); };
+  const delE = id => { setEnt(p => p.filter(e => e.id !== id)); data.deleteEntry(id); };
+  const togMs = id => { setMsDone(p => p.find(m => m.id === id) ? p.filter(m => m.id !== id) : [...p, { id, at: new Date().toISOString() }]); data.toggleMilestone(id); };
+  const addQ = () => { if (!nq.trim()) return; setQs(p => [...p, { id: Date.now(), text: nq, status: "pending", by: cu.name, ts: new Date().toISOString() }]); data.addQuestion(nq, cu.name); setNq(""); };
+  const togQ = id => { setQs(p => p.map(q => q.id === id ? { ...q, status: q.status === "pending" ? "done" : "pending" } : q)); data.toggleQuestion(id); };
+  const delQ = id => { setQs(p => p.filter(q => q.id !== id)); data.deleteQuestion(id); };
+  const addRem = () => { if (!remTxt.trim()) return; setRem(p => [...p, { id: Date.now(), text: remTxt, time: remTm, done: false }]); setRemTxt(""); setRemTm(""); setShowRemF(false); };
+  // Task actions
+  const addTask = () => { if (!tF_title.trim()) return; const t = { id: Date.now(), title: tF_title, date: tF_date, time: tF_time, cat: tF_cat, assignee: tF_assign || cu.name, repeat: tF_repeat, notes: tF_notes, done: false, by: cu.name, createdAt: new Date().toISOString() }; setTasks(p => [...p, t]); data.addTask({ title: tF_title, date: tF_date || null, time: tF_time, category: tF_cat, assignee: tF_assign || cu.name, repeat: tF_repeat, notes: tF_notes, created_by: cu.name }); setTFTitle(""); setTFDate(""); setTFTime(""); setTFCat("general"); setTFAssign(""); setTFRepeat("once"); setTFNotes(""); setTFShow(false); };
+  const togTask = id => { setTasks(p => p.map(t => t.id === id ? { ...t, done: !t.done, doneAt: !t.done ? new Date().toISOString() : null } : t)); data.toggleTask(id); };
+  const delTask = id => { setTasks(p => p.filter(t => t.id !== id)); data.deleteTask(id); };
+  const createInv = async () => { if (!invN.trim()) return; const result = await data.createInvitation({ name: invN, role: invR, perms: invPerms }); if (result) setInv(p => [...p, { id: result.id, code: result.code, name: invN, role: invR, perms: [...invPerms], status: "pending" }]); setInvN(""); setInvPerms([...ROLE_DEFAULTS.cuidador]); setInvStep(0); };
+  const acceptInv = id => { const i = inv.find(x => x.id === id); if (!i) return; setMem(p => [...p, { id: Date.now(), name: i.name, role: i.role, perms: i.perms, at: new Date().toISOString() }]); setInv(p => p.map(x => x.id === id ? { ...x, status: "done" } : x)); };
+  const remMem = id => setMem(p => p.filter(m => m.id !== id));
+  const updMemP = (id, pid) => { setMem(p => p.map(m => m.id === id ? { ...m, perms: m.perms.includes(pid) ? m.perms.filter(x => x !== pid) : [...m.perms, pid] } : m)); if (editM?.id === id) setEditM(prev => ({ ...prev, perms: prev.perms.includes(pid) ? prev.perms.filter(x => x !== pid) : [...prev.perms, pid] })); };
+  const switchU = (r, n) => setCu({ name: n, role: r, perms: ROLE_DEFAULTS[r] });
+
+  const handlePhoto = e => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => { if (typeof ev.target?.result === "string") { setCropSrc(ev.target.result); setCropScale(1); setCropOx(0); setCropOy(0); } };
+    reader.readAsDataURL(file);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+  const saveCrop = () => {
+    if (!cropSrc) return;
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const sz = 200; canvas.width = sz; canvas.height = sz;
+      const ctx = canvas.getContext("2d");
+      const cover = Math.max(sz / img.width, sz / img.height);
+      const iw = img.width * cover * cropScale;
+      const ih = img.height * cover * cropScale;
+      const dx = (sz - iw) / 2 + (cropOx / 50) * (iw - sz) * -0.5;
+      const dy = (sz - ih) / 2 + (cropOy / 50) * (ih - sz) * -0.5;
+      ctx.beginPath(); ctx.arc(sz / 2, sz / 2, sz / 2, 0, Math.PI * 2); ctx.clip();
+      ctx.drawImage(img, dx, dy, iw, ih);
+      setPhoto(canvas.toDataURL("image/jpeg", 0.8));
+      setCropSrc(null);
+    };
+    img.src = cropSrc;
+  };
+
+  const finOb = async () => { setOb(true); await data.saveBaby({ name: prof.name, gender: prof.gender, birth_date: prof.birthDate || null, age_range: prof.ageRange, photo_url: photo }); await auth.updateProfile({ name: cu.name, family_role: cu.familyRole }); setMem([{ id: Date.now(), name: cu.name, role: "admin", familyRole: cu.familyRole, perms: ROLE_DEFAULTS.admin, at: new Date().toISOString() }]); };
+  const resetAll = async () => { if (confirm("¿Cerrar sesión?")) { await auth.signOut(); } };
+
+  const exportCSV = () => {
+    const h = "Fecha,Hora,Tipo,Detalle,Valor,Por\n";
+    const rows = ent.map(e => {
+      let d = "", v = "";
+      if (e.type === "feed") { d = FT.find(f => f.id === e.feedType)?.l || ""; v = e.oz + "oz"; }
+      else if (e.type === "diaper") { d = DTP.find(x => x.id === e.diaperType)?.l || ""; }
+      else if (e.type === "sleep") { d = e.sleepType === "nap" ? "Siesta" : "Noche"; v = (e.duration || "?") + "min"; }
+      else if (e.type === "temp") { v = e.temp + "°C"; }
+      else if (e.type === "growth") { v = `${e.weight ? e.weight + "kg" : ""}${e.height ? " " + e.height + "cm" : ""}`; }
+      return `${fD(e.ts)},${fmt(e.ts)},${REC.find(r => r.id === e.type)?.l || ""},${d},${v},${e.by || ""}`;
+    }).join("\n");
+    const b = new Blob([h + rows], { type: "text/csv" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `babytrack-${prof.name || "data"}.csv`; a.click();
+  };
+
+  const askAI = async ov => {
+    const msg = ov || aiIn; if (!msg.trim()) return; if (!ov) setAiIn("");
+    setAiMsgs(p => [...p, { role: "user", text: msg }]); setAiL(true); data.addAiMessage("user", msg);
+    const ctx = `Eres asistente pediátrico (AAP/OMS). Español. Simple y cálido.
+Bebé: ${prof.name || "bebé"}, ${prof.birthDate ? fmtAge(prof.birthDate) : prof.ageRange}, ${prof.gender === "female" ? "niña" : "niño"}.
+Quien pregunta: ${cu.name} (${FAMILY_ROLES.find(r => r.id === cu.familyRole)?.l || "cuidador"}).
+Hoy: ${tF.length} tomas(${tOz}oz, meta:${goals.ozLabel}), ${tD} pañales(${tWet}mojados/${tPoo}popó, meta:${goals.wetLabel}), sueño:${tSlH}h(meta:${goals.sleepLabel}). Prom7d:${a7}oz/día.
+${lG ? `Peso:${lG.weight}kg Talla:${lG.height}cm` : ""} ${lT ? `Temp:${lT.temp}°C` : ""}
+Score: ${dailyScore}/100 (🍼${feedScore}/30 😴${sleepScore}/30 🧷${wetScore}/20 🌡️${tempScore}/10).
+Preguntas pediatra:[${qs.filter(q => q.status === "pending").map(q => q.text).join(",")}]
+Tareas:[${pendingTasks.slice(0, 5).map(t => `${t.title}(${t.date || "?"},${t.assignee})`).join(",")}]
+Hitos:[${msDone.map(m => milestones.find(x => x.id === m.id)?.l).filter(Boolean).join(",")}]
+Últimos 20:${JSON.stringify(ent.slice(-20))}
+Conciso(máx 150 palabras). Si preocupa→pediatra. Medidas en oz.`;
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, system: ctx,
+          messages: [...aiMsgs.slice(-20).map(m => ({ role: m.role === "user" ? "user" : "assistant", content: m.text })), { role: "user", content: msg }] })
+      });
+      const data2 = await res.json();
+      const aiText = data2.content?.map(c => c.text || "").join("") || "Error.";
+      setAiMsgs(p => [...p, { role: "assistant", text: aiText }]); data.addAiMessage("assistant", aiText);
+    } catch { setAiMsgs(p => [...p, { role: "assistant", text: "⚠️ Sin conexión." }]); }
+    setAiL(false);
+  };
+
+  // ── THEME ──
+  const T = dark
+    ? { bg: "#0C0C12", card: "#16161F", text: "#EEEAE5", soft: "#7A7686", accent: "#FF7A50", accentL: "#251A14", border: "#252530", ok: "#10B981", glass: "rgba(22,22,31,0.88)" }
+    : { bg: "#FAFAF7", card: "#FFFFFF", text: "#1C1917", soft: "#78716C", accent: "#E36F47", accentL: "#FEF0EB", border: "#EDEBE6", ok: "#10B981", glass: "rgba(255,255,255,0.88)" };
+  const CS = { background: T.card, borderRadius: 20, padding: 16, border: `1px solid ${T.border}` };
+
+  const Av = ({ sz = 40 }) => photo
+    ? <div style={{ width: sz, height: sz, borderRadius: sz * 0.35, overflow: "hidden", flexShrink: 0 }}><img src={photo} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /></div>
+    : <div style={{ width: sz, height: sz, borderRadius: sz * 0.35, background: T.accentL, display: "flex", alignItems: "center", justifyContent: "center", fontSize: sz * 0.5, flexShrink: 0 }}>{prof.gender === "female" ? "👧" : "👦"}</div>;
+
+  // ── LOADING ──
+  if (!ready) return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: T.bg, fontFamily: "'Nunito',system-ui" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}`}</style>
+      <div style={{ textAlign: "center" }}><div style={{ fontSize: 48, animation: "float 2s ease infinite" }}>👶</div><p style={{ color: "#999", marginTop: 12, fontSize: 14 }}>Cargando...</p></div>
+    </div>
+  );
+
+  // ── CSS ──
+  const css = `@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}input,textarea,button,select{font-family:inherit;color:inherit}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:${T.border};border-radius:3px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes scaleIn{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}
+@keyframes dotP{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+@keyframes gradMove{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(227,111,71,0.3)}50%{box-shadow:0 0 40px rgba(227,111,71,0.6)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:active{transform:scale(0.96)}`;
+
+  // ══ CROP MODAL (slider-only, no drag issues) ══
+  const cropModal = cropSrc ? (
+    <div style={{ position: "fixed", inset: 0, zIndex: 3e3, background: "rgba(0,0,0,0.94)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <p style={{ color: "#fff", fontSize: 17, fontWeight: 800, marginBottom: 6 }}>Ajusta la foto</p>
+      <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginBottom: 16 }}>Usa los controles para encuadrar</p>
+      <div style={{ width: 200, height: 200, borderRadius: "50%", overflow: "hidden", border: "3px solid rgba(255,255,255,0.2)", background: "#111", position: "relative" }}>
+        <img src={cropSrc} alt="" draggable={false} style={{ position: "absolute", left: "50%", top: "50%", transform: `translate(calc(-50% + ${cropOx}px), calc(-50% + ${cropOy}px)) scale(${cropScale})`, minWidth: 200, minHeight: 200, width: "auto", height: "auto", maxWidth: "none", maxHeight: "none", pointerEvents: "none" }} />
+      </div>
+      <div style={{ width: "100%", maxWidth: 260, marginTop: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <span style={{ color: "#fff", fontSize: 11, width: 30 }}>Zoom</span>
+          <input type="range" min="1" max="3" step="0.05" value={cropScale} onChange={e => setCropScale(+e.target.value)} style={{ flex: 1, accentColor: T.accent }} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <span style={{ color: "#fff", fontSize: 11, width: 30 }}>← →</span>
+          <input type="range" min="-60" max="60" step="1" value={cropOx} onChange={e => setCropOx(+e.target.value)} style={{ flex: 1, accentColor: T.accent }} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ color: "#fff", fontSize: 11, width: 30 }}>↑ ↓</span>
+          <input type="range" min="-60" max="60" step="1" value={cropOy} onChange={e => setCropOy(+e.target.value)} style={{ flex: 1, accentColor: T.accent }} />
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+        <button onClick={() => setCropSrc(null)} style={{ padding: "12px 24px", borderRadius: 16, background: "rgba(255,255,255,0.1)", color: "#fff", border: "1px solid rgba(255,255,255,0.15)", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>Cancelar</button>
+        <button onClick={saveCrop} style={{ padding: "12px 24px", borderRadius: 16, background: `linear-gradient(135deg,${T.accent},#D4623C)`, color: "#fff", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>Guardar ✓</button>
+      </div>
+    </div>
+  ) : null;
+
+  // ══ ONBOARDING ══
+  if (!ob) return (
+    <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: dark ? "linear-gradient(-45deg,#1A1020,#0F1A2A,#1A1525,#0A1520)" : "linear-gradient(-45deg,#FEF0EB,#DBEAFE,#FDE8F0,#E0E7FF)", backgroundSize: "400% 400%", animation: "gradMove 8s ease infinite", fontFamily: "'Nunito',system-ui", color: T.text, padding: 24, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+      <style>{css}</style>
+      {cropModal}
+      <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
+      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>{[0, 1, 2].map(i => <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= obS ? T.accent : "rgba(128,128,128,0.3)", transition: "background 0.3s" }} />)}</div>
+
+      {obS === 0 && <div style={{ textAlign: "center", animation: "fadeUp 0.5s ease" }}>
+        <div style={{ fontSize: 80, marginBottom: 12, animation: "float 3s ease infinite" }}>👶</div>
+        <h1 style={{ fontSize: 34, fontWeight: 900, letterSpacing: -1 }}>BabyTrack</h1>
+        <p style={{ fontSize: 14, color: T.accent, fontWeight: 700, marginBottom: 28 }}>Tracking inteligente para tu bebé</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 28 }}>
+          {[{ e: "🍼", x: "Tomas" }, { e: "😴", x: "Sueño" }, { e: "🧷", x: "Pañales" }, { e: "🤖", x: "IA" }, { e: "👨‍👩‍👧", x: "Familia" }, { e: "🌟", x: "Hitos" }].map((f, i) =>
+            <div key={i} style={{ background: T.card + "CC", backdropFilter: "blur(8px)", borderRadius: 16, padding: "14px 8px", textAlign: "center", border: `1px solid ${T.border}55` }}>
+              <span style={{ fontSize: 24, display: "block", marginBottom: 2 }}>{f.e}</span><span style={{ fontSize: 11, fontWeight: 700 }}>{f.x}</span></div>)}
+        </div>
+        <button onClick={() => setObS(1)} style={{ width: "100%", padding: 18, borderRadius: 22, background: `linear-gradient(135deg,${T.accent},#D4623C)`, color: "#fff", border: "none", cursor: "pointer", fontSize: 18, fontWeight: 800, boxShadow: "0 8px 32px rgba(227,111,71,0.4)", animation: "glow 3s ease infinite" }}>Comenzar →</button>
+      </div>}
+
+      {obS === 1 && <div style={{ animation: "fadeUp 0.4s ease" }}>
+        <h2 style={{ fontSize: 24, fontWeight: 900, marginBottom: 16 }}>Sobre tu bebé</h2>
+        <div style={{ textAlign: "center", marginBottom: 14 }}>
+          <div onClick={() => fileRef.current?.click()} style={{ cursor: "pointer", display: "inline-block", position: "relative" }}>
+            {photo ? <img src={photo} style={{ width: 80, height: 80, borderRadius: 28, objectFit: "cover", border: `3px solid ${T.accent}` }} alt="" />
+              : <div style={{ width: 80, height: 80, borderRadius: 28, background: T.card + "CC", border: `3px dashed rgba(128,128,128,0.4)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>📷</div>}
+            <div style={{ position: "absolute", bottom: -2, right: -2, width: 24, height: 24, borderRadius: 8, background: T.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#fff" }}>+</div>
+          </div>
+          <p style={{ fontSize: 11, color: T.soft, marginTop: 4 }}>Foto (opcional)</p>
+        </div>
+        <input value={prof.name} onChange={e => setProf(p => ({ ...p, name: e.target.value }))} placeholder="Nombre del bebé" autoFocus style={{ width: "100%", padding: "14px 16px", borderRadius: 16, border: `2px solid ${T.border}`, fontSize: 18, outline: "none", fontWeight: 700, background: T.card + "DD", marginBottom: 12 }} />
+        <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+          {[{ id: "female", l: "Niña", e: "👧" }, { id: "male", l: "Niño", e: "👦" }].map(g =>
+            <button key={g.id} onClick={() => setProf(p => ({ ...p, gender: g.id }))} style={{ flex: 1, padding: 14, borderRadius: 16, cursor: "pointer", background: prof.gender === g.id ? T.accentL : T.card + "DD", border: `2px solid ${prof.gender === g.id ? T.accent : T.border}`, fontSize: 15, fontWeight: 700, textAlign: "center" }}>
+              <span style={{ fontSize: 28, display: "block", marginBottom: 2 }}>{g.e}</span>{g.l}</button>)}
+        </div>
+        <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Fecha de nacimiento</p>
+        <input type="date" value={prof.birthDate} onChange={e => setProf(p => ({ ...p, birthDate: e.target.value }))} style={{ width: "100%", padding: "14px 16px", borderRadius: 16, border: `2px solid ${T.border}`, fontSize: 16, outline: "none", fontWeight: 700, background: T.card + "DD", marginBottom: 8 }} />
+        {prof.birthDate && <div style={{ background: T.card + "CC", backdropFilter: "blur(8px)", borderRadius: 14, padding: "10px 14px", marginBottom: 14, border: `1px solid ${T.accent}44` }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: T.accent }}>🎂 {fmtAge(prof.birthDate)}</p>
+          <p style={{ fontSize: 12, color: T.soft }}>Rango: {ageToRange(prof.birthDate) || "—"}</p></div>}
+        {!prof.birthDate && <div style={{ marginBottom: 14 }}>
+          <p style={{ fontSize: 12, color: T.soft, marginBottom: 8 }}>O selecciona un rango aproximado:</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {["0-3 meses", "3-6 meses", "6-9 meses", "9-12 meses"].map(a =>
+              <button key={a} onClick={() => setProf(p => ({ ...p, ageRange: a }))} style={{ padding: 12, borderRadius: 14, cursor: "pointer", background: prof.ageRange === a ? T.accentL : T.card + "DD", border: `2px solid ${prof.ageRange === a ? T.accent : T.border}`, fontSize: 13, fontWeight: prof.ageRange === a ? 800 : 600, color: prof.ageRange === a ? T.accent : T.text }}>{a}</button>)}</div></div>}
+        <button onClick={() => setObS(2)} style={{ width: "100%", padding: 16, borderRadius: 20, background: `linear-gradient(135deg,${T.accent},#D4623C)`, color: "#fff", border: "none", cursor: "pointer", fontSize: 17, fontWeight: 800 }}>Siguiente →</button>
+      </div>}
+
+      {obS === 2 && <div style={{ animation: "fadeUp 0.4s ease" }}>
+        <h2 style={{ fontSize: 24, fontWeight: 900, marginBottom: 6 }}>¿Quién eres tú?</h2>
+        <p style={{ fontSize: 13, color: T.soft, marginBottom: 14 }}>Tu nombre aparece en cada registro</p>
+        <input value={cu.name === "Yo" ? "" : cu.name} onChange={e => setCu(p => ({ ...p, name: e.target.value || "Yo" }))} placeholder="Tu nombre" autoFocus style={{ width: "100%", padding: "14px 16px", borderRadius: 16, border: `2px solid ${T.border}`, fontSize: 18, outline: "none", fontWeight: 700, background: T.card + "DD", marginBottom: 14 }} />
+        <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Tu rol en la familia</p>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
+          {FAMILY_ROLES.map(r => <button key={r.id} onClick={() => setCu(p => ({ ...p, familyRole: r.id }))} style={{ padding: "8px 12px", borderRadius: 12, cursor: "pointer", background: cu.familyRole === r.id ? T.accentL : T.card + "DD", border: `2px solid ${cu.familyRole === r.id ? T.accent : T.border}`, fontSize: 13, fontWeight: cu.familyRole === r.id ? 800 : 600 }}>
+            <span style={{ marginRight: 4 }}>{r.e}</span>{r.l}</button>)}</div>
+        <button onClick={finOb} disabled={!prof.name.trim()} style={{ width: "100%", padding: 18, borderRadius: 22, background: prof.name.trim() ? `linear-gradient(135deg,${T.accent},#D4623C)` : "#999", color: "#fff", border: "none", cursor: prof.name.trim() ? "pointer" : "default", fontSize: 18, fontWeight: 800 }}>¡Empezar! 🎉</button>
+      </div>}
+    </div>
+  );
+
+  // ══ MAIN ══
+  const Bk = ({ fn }) => <button onClick={fn} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: "8px 14px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 14, flexShrink: 0, color: T.text, fontWeight: 700 }}>← <span style={{ fontSize: 12 }}>Volver</span></button>;
+  const SL = ({ children }) => <p style={{ fontSize: 11, fontWeight: 800, color: T.soft, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.8 }}>{children}</p>;
+
+  return (
+    <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: T.bg, fontFamily: "'Nunito',system-ui", color: T.text, position: "relative", transition: "background 0.3s" }}>
+      <style>{css}</style>
+      <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
+
+      {ok && <div style={{ position: "fixed", inset: 0, zIndex: 2e3, display: "flex", alignItems: "center", justifyContent: "center", background: dark ? "rgba(12,12,18,0.95)" : "rgba(250,250,247,0.95)", backdropFilter: "blur(8px)", animation: "scaleIn 0.3s ease" }}>
+        <div style={{ textAlign: "center" }}><div style={{ width: 70, height: 70, borderRadius: "50%", background: T.ok, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: 28, color: "#fff" }}>✓</div><p style={{ fontSize: 17, fontWeight: 800 }}>{okM}</p></div></div>}
+
+      {/* CROP MODAL */}
+      {cropModal}
+
+      {/* HOME */}
+      {view === "home" && !sub && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.4s ease" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div onClick={() => hp("manage_family") && fileRef.current?.click()} style={{ cursor: hp("manage_family") ? "pointer" : "default" }}><Av sz={42} /></div>
+            <div><p style={{ fontSize: 11, color: T.soft, fontWeight: 600 }}>{FAMILY_ROLES.find(r => r.id === cu.familyRole)?.e || ""} {FAMILY_ROLES.find(r => r.id === cu.familyRole)?.l || ""} · {cu.name}</p>
+              <h1 style={{ fontSize: 20, fontWeight: 900 }}>{prof.name || "Mi Bebé"}</h1>
+              {prof.birthDate && <p style={{ fontSize: 11, color: T.accent, fontWeight: 700 }}>{fmtAge(prof.birthDate)}</p>}</div></div>
+          <div style={{ display: "flex", gap: 5 }}>
+            <button onClick={() => setDark(!dark)} style={{ width: 36, height: 36, borderRadius: 12, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 15 }}>{dark ? "☀️" : "🌙"}</button>
+            {hp("manage_family") && <button onClick={() => setView("profile")} style={{ width: 36, height: 36, borderRadius: 12, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 15 }}>⚙️</button>}
+            {!hp("manage_family") && <button onClick={resetAll} style={{ width: 36, height: 36, borderRadius: 12, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 11, fontWeight: 700, color: T.soft }}>🔄</button>}
+          </div></div>
+
+        {slpA && <div onClick={() => setSub("sleep")} style={{ background: "linear-gradient(135deg,#7C3AED,#6D28D9)", borderRadius: 20, padding: "14px 16px", marginBottom: 10, cursor: "pointer", animation: "pulse 2s ease infinite" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><p style={{ fontSize: 11, color: "#E9D5FF", fontWeight: 700 }}>{slpA.type === "nap" ? "💤 SIESTA" : "🌙 NOCHE"} EN CURSO</p><p style={{ fontSize: 26, fontWeight: 900, color: "#fff" }}>{fSec(slpE)}</p></div>
+            <div style={{ padding: "8px 14px", borderRadius: 12, background: "rgba(255,255,255,0.2)", color: "#fff", fontWeight: 800, fontSize: 12 }}>Detener</div></div></div>}
+
+        {alerts.length > 0 && <div style={{ marginBottom: 10 }}>{alerts.map((a, i) => <div key={i} onClick={() => { if (a.m.includes("tarea")) setView("tasks"); }} style={{ padding: "10px 14px", borderRadius: 16, marginBottom: 5, background: dark ? "rgba(20,20,31,0.7)" : "rgba(255,255,255,0.7)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: `1px solid ${a.t === "danger" ? "#EF444433" : "#F59E0B33"}`, display: "flex", alignItems: "center", gap: 10, cursor: "pointer", animation: `slideIn 0.3s ease ${i * 0.08}s both`, boxShadow: a.t === "danger" ? "0 0 20px rgba(239,68,68,0.1)" : "none" }}>
+          <div style={{ width: 34, height: 34, borderRadius: 11, background: a.t === "danger" ? "#EF444418" : "#F59E0B18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0, boxShadow: a.t === "danger" ? "0 0 14px #EF444430" : "none" }}>{a.t === "danger" ? "🚨" : "⚠️"}</div>
+          <p style={{ fontSize: 12, fontWeight: 700, color: a.t === "danger" ? "#EF4444" : "#D97706", flex: 1 }}>{a.m}</p>
+          <span style={{ fontSize: 11, color: T.soft, opacity: 0.5 }}>›</span></div>)}</div>}
+
+        {/* DAILY SCORE */}
+        {hasData && <div style={{ background: dark ? "rgba(20,20,31,0.6)" : "rgba(255,255,255,0.65)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderRadius: 22, padding: "16px 18px", marginBottom: 10, border: `1.5px solid ${scoreColor}22`, display: "flex", alignItems: "center", gap: 16, boxShadow: `0 4px 24px ${scoreColor}12` }}>
+          <div style={{ position: "relative", width: 62, height: 62, flexShrink: 0 }}>
+            <svg width="62" height="62" viewBox="0 0 62 62">
+              <circle cx="31" cy="31" r="27" fill="none" stroke={T.border} strokeWidth="5" />
+              <circle cx="31" cy="31" r="27" fill="none" stroke={scoreColor} strokeWidth="5" strokeLinecap="round"
+                strokeDasharray={`${(dailyScore / 100) * 170} 170`} transform="rotate(-90 31 31)" style={{ transition: "stroke-dasharray 0.8s ease" }} />
+            </svg>
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
+              <span style={{ fontSize: 18, fontWeight: 900, color: scoreColor, lineHeight: 1 }}>{dailyScore}</span>
+              <span style={{ fontSize: 8, color: T.soft }}>/ 100</span></div></div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
+              <span style={{ fontSize: 14 }}>{scoreEmoji}</span>
+              <p style={{ fontSize: 14, fontWeight: 800, color: scoreColor }}>{scoreLabel}</p></div>
+            <p style={{ fontSize: 11, color: T.soft, lineHeight: 1.4 }}>
+              🍼 {feedScore}/30 · 😴 {sleepScore}/30 · 🧷 {wetScore}/20 · 🌡️ {tempScore}/10
+            </p></div>
+        </div>}
+
+        <div style={{ background: dark ? "rgba(20,20,31,0.5)" : "rgba(255,255,255,0.55)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderRadius: 16, padding: "10px 14px", marginBottom: 10, border: `1px solid ${T.border}` }}>
+          <p style={{ fontSize: 10, fontWeight: 800, color: T.accent }}>💡 TIP DEL DÍA</p><p style={{ fontSize: 12, lineHeight: 1.4 }}>{tipDay}</p></div>
+
+        {/* ═══ BENTO GRID 2026 ═══ */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+          {/* FEED CARD */}
+          <div onClick={() => setSub("feed")} style={{ background: dark ? "rgba(249,168,212,0.06)" : "rgba(249,168,212,0.1)", borderRadius: 20, padding: "16px 14px", border: `1px solid ${dark ? "#F9A8D415" : "#F9A8D425"}`, cursor: "pointer", transition: "transform 0.15s", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: -20, right: -20, width: 80, height: 80, borderRadius: "50%", background: "#F9A8D4" + (dark ? "08" : "0A"), pointerEvents: "none" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <span style={{ fontSize: 22 }}>🍼</span>
+              <span style={{ fontSize: 10, color: T.soft, fontWeight: 700, background: T.card, padding: "2px 8px", borderRadius: 8 }}>{goals.ozLabel}</span></div>
+            <p style={{ fontSize: 32, fontWeight: 900, color: feedStatus === "ok" ? T.ok : feedStatus === "warn" ? "#F59E0B" : T.text, lineHeight: 1, marginBottom: 2 }}>{tOz}<span style={{ fontSize: 14, fontWeight: 600, color: T.soft }}>oz</span></p>
+            <div style={{ height: 5, borderRadius: 3, background: T.border, marginTop: 10, overflow: "hidden" }}>
+              <div style={{ height: "100%", borderRadius: 3, width: `${feedPct}%`, background: feedStatus === "ok" ? T.ok : feedStatus === "warn" ? "#F59E0B" : "#EF4444", transition: "width 0.6s ease" }} /></div>
+            <p style={{ fontSize: 10, color: T.soft, marginTop: 6 }}>{tF.length} toma{tF.length !== 1 ? "s" : ""}{lF ? ` · ${rel(lF.ts)}` : ""}</p></div>
+
+          {/* SLEEP CARD */}
+          <div onClick={() => setSub("sleep")} style={{ background: dark ? "rgba(196,181,253,0.06)" : "rgba(196,181,253,0.1)", borderRadius: 20, padding: "16px 14px", border: `1px solid ${dark ? "#C4B5FD15" : "#C4B5FD25"}`, cursor: "pointer", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: -20, right: -20, width: 80, height: 80, borderRadius: "50%", background: "#C4B5FD" + (dark ? "08" : "0A"), pointerEvents: "none" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <span style={{ fontSize: 22 }}>😴</span>
+              <span style={{ fontSize: 10, color: T.soft, fontWeight: 700, background: T.card, padding: "2px 8px", borderRadius: 8 }}>{goals.sleepLabel}</span></div>
+            <p style={{ fontSize: 32, fontWeight: 900, color: sleepStatus === "ok" ? T.ok : sleepStatus === "warn" ? "#F59E0B" : T.text, lineHeight: 1, marginBottom: 2 }}>{tSlH}<span style={{ fontSize: 14, fontWeight: 600, color: T.soft }}>h</span></p>
+            <div style={{ height: 5, borderRadius: 3, background: T.border, marginTop: 10, overflow: "hidden" }}>
+              <div style={{ height: "100%", borderRadius: 3, width: `${sleepPct}%`, background: sleepStatus === "ok" ? T.ok : sleepStatus === "warn" ? "#F59E0B" : "#EF4444", transition: "width 0.6s ease" }} /></div>
+            <p style={{ fontSize: 10, color: T.soft, marginTop: 6 }}>{sleepTip}</p></div>
+
+          {/* DIAPERS WIDE CARD */}
+          <div onClick={() => setSub("diaper")} style={{ gridColumn: "span 2", background: dark ? "rgba(125,211,252,0.05)" : "rgba(125,211,252,0.08)", borderRadius: 20, padding: "14px 16px", border: `1px solid ${dark ? "#7DD3FC15" : "#7DD3FC20"}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <span style={{ fontSize: 20 }}>🧷</span><span style={{ fontSize: 13, fontWeight: 800 }}>Pañales</span></div>
+              <div style={{ display: "flex", gap: 20 }}>
+                <div><p style={{ fontSize: 26, fontWeight: 900, color: wetStatus === "ok" ? T.ok : wetStatus === "warn" ? "#F59E0B" : T.text, lineHeight: 1 }}>{tWet} <span style={{ fontSize: 16 }}>💧</span></p>
+                  <p style={{ fontSize: 10, color: T.soft, marginTop: 2 }}>de {goals.wetLabel} mojados</p></div>
+                {tPoo > 0 && <div><p style={{ fontSize: 26, fontWeight: 900, lineHeight: 1 }}>{tPoo} <span style={{ fontSize: 16 }}>💩</span></p>
+                  <p style={{ fontSize: 10, color: T.soft, marginTop: 2 }}>{goals.pooFreq}</p></div>}
+              </div></div>
+            <div style={{ width: 54, height: 54, position: "relative", flexShrink: 0 }}>
+              <svg width="54" height="54" viewBox="0 0 54 54"><circle cx="27" cy="27" r="22" fill="none" stroke={T.border} strokeWidth="4" /><circle cx="27" cy="27" r="22" fill="none" stroke={wetStatus === "ok" ? T.ok : wetStatus === "warn" ? "#F59E0B" : "#EF4444"} strokeWidth="4" strokeLinecap="round" strokeDasharray={`${(wetPct / 100) * 138} 138`} transform="rotate(-90 27 27)" style={{ transition: "stroke-dasharray 0.6s ease" }} /></svg>
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: T.soft }}>{wetPct}%</div></div></div>
+
+          {/* LAST FEED + TEMP MINI CARDS */}
+          <div style={{ background: T.card, borderRadius: 16, padding: "12px 14px", border: `1px solid ${T.border}` }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: T.soft, marginBottom: 4 }}>⏱ Última toma</p>
+            <p style={{ fontSize: 16, fontWeight: 900 }}>{lF ? rel(lF.ts) : "—"}</p>
+            <p style={{ fontSize: 10, color: T.soft }}>{lF ? `${lF.oz}oz · ${fmt(lF.ts)}` : "Sin registros"}</p></div>
+          <div style={{ background: T.card, borderRadius: 16, padding: "12px 14px", border: `1px solid ${T.border}` }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: T.soft, marginBottom: 4 }}>🌡️ Temperatura</p>
+            <p style={{ fontSize: 16, fontWeight: 900, color: lT?.temp >= 38 ? "#EF4444" : lT?.temp >= 37.5 ? "#F59E0B" : T.text }}>{lT ? `${lT.temp}°C` : "—"}</p>
+            <p style={{ fontSize: 10, color: T.soft }}>{lT ? (lT.temp >= 38 ? "⚠️ Fiebre" : lT.temp >= 37.5 ? "Elevada" : "Normal") : "Sin registro"}</p></div>
+        </div>
+
+        <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>Registrar</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 12 }}>
+          {REC.filter(r => hp(r.p)).map(r => <button key={r.id} onClick={() => setSub(r.id)} style={{ ...CS, padding: "14px 10px", cursor: "pointer", textAlign: "left", border: `1.5px solid ${r.c}${dark ? "22" : "33"}`, display: "flex", alignItems: "center", gap: 9 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 14, background: r.c + (dark ? "18" : "20"), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{r.e}</div>
+            <div><p style={{ fontSize: 13, fontWeight: 800 }}>{r.l}</p><p style={{ fontSize: 10, color: T.soft }}>{r.d}</p></div></button>)}</div>
+
+        <div style={{ display: "flex", gap: 7, marginBottom: 10 }}>
+          {hp("view_milestones") && <button onClick={() => setView("milestones")} style={{ ...CS, flex: 1, padding: "11px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 7 }}><span style={{ fontSize: 17 }}>🌟</span><div><p style={{ fontSize: 12, fontWeight: 800 }}>Hitos</p><p style={{ fontSize: 10, color: T.soft }}>{msDone.length}/{milestones.length}</p></div></button>}
+          {hp("manage_family") && <button onClick={() => setView("family")} style={{ ...CS, flex: 1, padding: "11px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 7 }}><span style={{ fontSize: 17 }}>👨‍👩‍👧</span><div><p style={{ fontSize: 12, fontWeight: 800 }}>Familia</p><p style={{ fontSize: 10, color: T.soft }}>{mem.length}</p></div></button>}
+          <button onClick={() => setView("tasks")} style={{ ...CS, flex: 1, padding: "11px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 7 }}><span style={{ fontSize: 17 }}>📌</span><div><p style={{ fontSize: 12, fontWeight: 800 }}>Tareas</p><p style={{ fontSize: 10, color: T.soft }}>{pendingTasks.length}</p></div></button></div>
+
+        {/* My Tasks Preview */}
+        {myTasks.length > 0 && <div style={{ ...CS, padding: "12px 14px", marginBottom: 10, cursor: "pointer" }} onClick={() => setView("tasks")}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <p style={{ fontSize: 12, fontWeight: 800 }}>📌 Mis tareas ({myTasks.length})</p><span style={{ fontSize: 10, color: T.accent, fontWeight: 700 }}>ver todo →</span></div>
+          {myTasks.slice(0, 3).map(t => { const cat = TASK_CATS.find(c => c.id === t.cat); return (
+            <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderTop: `1px solid ${T.border}` }}>
+              <span style={{ fontSize: 14 }}>{cat?.e || "📋"}</span>
+              <div style={{ flex: 1 }}><p style={{ fontSize: 12, fontWeight: 600 }}>{t.title}</p>
+                <p style={{ fontSize: 10, color: t.date && isPastDate(t.date) ? "#EF4444" : T.soft }}>{t.date ? fDShort(t.date) : "Sin fecha"}{t.time ? ` ${t.time}` : ""}{t.assignee ? ` · ${t.assignee}` : ""}</p></div></div>); })}</div>}
+
+        {qs.filter(q => q.status === "pending").length > 0 && hp("view_questions") && <button onClick={() => setView("questions")} style={{ width: "100%", padding: "10px 14px", borderRadius: 14, background: dark ? "#2A2511" : "#FEF9E7", border: `1px solid ${dark ? "#554411" : "#FDE68A"}`, cursor: "pointer", textAlign: "left" }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: "#D97706" }}>📋 {qs.filter(q => q.status === "pending").length} pregunta(s) pendiente(s)</p></button>}
+      </div>}
+
+      {/* FEED */}
+      {sub === "feed" && <div style={{ padding: "14px 16px 40px", animation: "fadeUp 0.3s ease", background: dark ? "linear-gradient(180deg,#1A1015 0%,#0C0C12 100%)" : "linear-gradient(180deg,#FEF0EB 0%,#FAFAF7 30%)", minHeight: "100vh" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}><Bk fn={() => setSub(null)} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>🍼 Alimentación</h2></div>
+        <SL>Tipo</SL><div style={{ display: "flex", gap: 7, marginBottom: 18 }}>{FT.map(x => <button key={x.id} onClick={() => setFTy(x.id)} style={{ flex: 1, padding: "14px 4px", borderRadius: 16, cursor: "pointer", background: fTy === x.id ? x.c + (dark ? "28" : "20") : T.card, textAlign: "center", border: `2px solid ${fTy === x.id ? x.c : T.border}` }}><span style={{ fontSize: 26, display: "block", marginBottom: 2 }}>{x.e}</span><span style={{ fontSize: 12, fontWeight: fTy === x.id ? 800 : 600 }}>{x.l}</span></button>)}</div>
+        <SL>Onzas</SL><div style={{ ...CS, textAlign: "center", marginBottom: 10, padding: 18 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
+            <button onClick={() => setFOz(Math.max(0.5, fOz - 0.5))} style={{ width: 48, height: 48, borderRadius: 16, background: T.accentL, border: "none", fontSize: 22, cursor: "pointer", fontWeight: 800, color: T.accent }}>−</button>
+            <div><span style={{ fontSize: 48, fontWeight: 900, color: T.accent }}>{fOz}</span><p style={{ fontSize: 12, color: T.soft }}>oz</p></div>
+            <button onClick={() => setFOz(fOz + 0.5)} style={{ width: 48, height: 48, borderRadius: 16, background: T.accentL, border: "none", fontSize: 22, cursor: "pointer", fontWeight: 800, color: T.accent }}>+</button></div></div>
+        <div style={{ display: "flex", gap: 5, marginBottom: 14, flexWrap: "wrap" }}>{[2, 3, 4, 5, 6, 7, 8].map(o => <button key={o} onClick={() => setFOz(o)} style={{ padding: "7px 13px", borderRadius: 11, background: fOz === o ? T.accent : T.card, color: fOz === o ? "#fff" : T.soft, border: `1.5px solid ${fOz === o ? T.accent : T.border}`, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{o}oz</button>)}</div>
+        <SL>Hora (vacío = ahora)</SL><input type="datetime-local" value={fTs} onChange={e => setFTs(e.target.value)} style={{ width: "100%", padding: 11, borderRadius: 14, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, outline: "none", marginBottom: 10 }} />
+        <SL>Notas</SL><textarea value={fNo} onChange={e => setFNo(e.target.value)} placeholder="Opcional..." style={{ width: "100%", padding: 11, borderRadius: 14, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, resize: "none", height: 50, outline: "none" }} />
+        <button onClick={addFeed} style={{ width: "100%", padding: 15, borderRadius: 20, background: `linear-gradient(135deg,${T.accent},#D4623C)`, color: "#fff", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 800, marginTop: 16, boxShadow: "0 8px 24px rgba(227,111,71,0.3)" }}>Guardar ✓</button></div>}
+
+      {/* DIAPER */}
+      {sub === "diaper" && <div style={{ padding: "14px 16px 40px", animation: "fadeUp 0.3s ease", background: dark ? "linear-gradient(180deg,#0F1520 0%,#0C0C12 100%)" : "linear-gradient(180deg,#DBEAFE 0%,#FAFAF7 30%)", minHeight: "100vh" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}><Bk fn={() => setSub(null)} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>🧷 Pañal</h2></div>
+        <SL>Tipo</SL><div style={{ display: "flex", gap: 7, marginBottom: 18 }}>{DTP.map(x => <button key={x.id} onClick={() => setDTy(x.id)} style={{ flex: 1, padding: "16px 4px", borderRadius: 16, cursor: "pointer", background: dTy === x.id ? x.c + (dark ? "28" : "20") : T.card, textAlign: "center", border: `2px solid ${dTy === x.id ? x.c : T.border}` }}><span style={{ fontSize: 28, display: "block", marginBottom: 2 }}>{x.e}</span><span style={{ fontSize: 13, fontWeight: dTy === x.id ? 800 : 600 }}>{x.l}</span></button>)}</div>
+        {dTy !== "pee" && <><SL>Color</SL><div style={{ display: "flex", gap: 7, marginBottom: 14, flexWrap: "wrap" }}>{PCL.map(c => <button key={c.id} onClick={() => setPCo(c.id)} style={{ padding: "7px 12px", borderRadius: 11, cursor: "pointer", background: pCo === c.id ? c.h + "20" : T.card, border: `2px solid ${pCo === c.id ? c.h : T.border}`, display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 14, height: 14, borderRadius: 4, background: c.h }} /><span style={{ fontSize: 12, fontWeight: 700 }}>{c.l}</span></button>)}</div>
+          <SL>Consistencia</SL><div style={{ display: "flex", gap: 5, marginBottom: 14, flexWrap: "wrap" }}>{PCN.map(c => <button key={c.id} onClick={() => setPCn(c.id)} style={{ padding: "7px 14px", borderRadius: 11, cursor: "pointer", background: pCn === c.id ? T.accent : T.card, color: pCn === c.id ? "#fff" : T.text, border: `1.5px solid ${pCn === c.id ? T.accent : T.border}`, fontSize: 12, fontWeight: 700 }}>{c.l}</button>)}</div></>}
+        <button onClick={addDiaper} style={{ width: "100%", padding: 15, borderRadius: 20, background: "linear-gradient(135deg,#60A5FA,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 800 }}>Guardar ✓</button></div>}
+
+      {/* SLEEP */}
+      {sub === "sleep" && <div style={{ padding: "14px 16px 40px", animation: "fadeUp 0.3s ease", background: dark ? "linear-gradient(180deg,#14101E 0%,#0C0C12 100%)" : "linear-gradient(180deg,#EDE9FE 0%,#FAFAF7 30%)", minHeight: "100vh" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}><Bk fn={() => setSub(null)} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>😴 Sueño</h2></div>
+        {!slpA ? <><p style={{ fontSize: 13, color: T.soft, textAlign: "center", marginBottom: 20 }}>Toca cuando se duerma</p>
+          <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>{[{ id: "nap", l: "Siesta", e: "💤", c: "#A78BFA" }, { id: "night", l: "Noche", e: "🌙", c: "#6366F1" }].map(x =>
+            <button key={x.id} onClick={() => startSlp(x.id)} style={{ flex: 1, padding: "26px 10px", borderRadius: 22, cursor: "pointer", background: `linear-gradient(135deg,${x.c},${x.c}CC)`, textAlign: "center", border: "none", color: "#fff", boxShadow: `0 8px 24px ${x.c}44` }}>
+              <span style={{ fontSize: 36, display: "block", marginBottom: 6 }}>{x.e}</span><span style={{ fontSize: 15, fontWeight: 800 }}>Iniciar {x.l}</span></button>)}</div>
+          <SL>Registro rápido</SL><div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>{[15, 30, 45, 60, 90, 120].map(m => <button key={m} onClick={() => { setEnt(p => [...p, { id: Date.now(), type: "sleep", sleepType: "nap", duration: m, by: cu.name, ts: new Date().toISOString() }]); flash(`${m}min ✓`); }} style={{ padding: "9px 14px", borderRadius: 12, background: T.card, border: `1.5px solid ${T.border}`, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{m >= 60 ? `${m / 60}h` : `${m}min`}</button>)}</div>
+        </> : <><div style={{ textAlign: "center", padding: "20px 0", marginBottom: 16 }}>
+          <p style={{ fontSize: 13, color: T.soft }}>{slpA.type === "nap" ? "💤 Siesta" : "🌙 Noche"}</p>
+          <p style={{ fontSize: 60, fontWeight: 900, color: T.accent, letterSpacing: -2 }}>{fSec(slpE)}</p>
+          <p style={{ fontSize: 12, color: T.soft }}>Desde {fmt(slpA.at)}</p></div>
+          <button onClick={stopSlp} style={{ width: "100%", padding: 16, borderRadius: 22, background: "linear-gradient(135deg,#EF4444,#DC2626)", color: "#fff", border: "none", cursor: "pointer", fontSize: 17, fontWeight: 800 }}>⏹ Detener y Guardar</button></>}</div>}
+
+      {/* TEMP */}
+      {sub === "temp" && <div style={{ padding: "14px 16px 40px", animation: "fadeUp 0.3s ease", background: dark ? "linear-gradient(180deg,#1A1010 0%,#0C0C12 100%)" : "linear-gradient(180deg,#FEE2E2 0%,#FAFAF7 30%)", minHeight: "100vh" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}><Bk fn={() => setSub(null)} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>🌡️ Temperatura</h2></div>
+        <div style={{ ...CS, textAlign: "center", padding: 24, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
+            <button onClick={() => setTmp(Math.max(34, +(tmp - 0.1).toFixed(1)))} style={{ width: 48, height: 48, borderRadius: 16, background: "#7DD3FC" + (dark ? "18" : "20"), border: "none", fontSize: 20, cursor: "pointer", fontWeight: 800, color: "#3B82F6" }}>−</button>
+            <div><span style={{ fontSize: 48, fontWeight: 900, color: tmp >= 38 ? "#EF4444" : tmp >= 37.5 ? "#F59E0B" : T.text }}>{tmp.toFixed(1)}</span><p style={{ fontSize: 13, color: T.soft }}>°C</p></div>
+            <button onClick={() => setTmp(+(tmp + 0.1).toFixed(1))} style={{ width: 48, height: 48, borderRadius: 16, background: "#FCA5A5" + (dark ? "18" : "20"), border: "none", fontSize: 20, cursor: "pointer", fontWeight: 800, color: "#EF4444" }}>+</button></div>
+          {tmp >= 38 && <p style={{ marginTop: 12, fontSize: 12, color: "#EF4444", fontWeight: 700, background: dark ? "#2D0F0F" : "#FEE2E2", padding: "8px 10px", borderRadius: 10 }}>⚠️ Fiebre — pediatra</p>}</div>
+        <button onClick={addTemp} style={{ width: "100%", padding: 15, borderRadius: 20, background: "linear-gradient(135deg,#F87171,#EF4444)", color: "#fff", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 800 }}>Guardar ✓</button></div>}
+
+      {/* GROWTH */}
+      {sub === "growth" && <div style={{ padding: "14px 16px 40px", animation: "fadeUp 0.3s ease", background: dark ? "linear-gradient(180deg,#101A15 0%,#0C0C12 100%)" : "linear-gradient(180deg,#D1FAE5 0%,#FAFAF7 30%)", minHeight: "100vh" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}><Bk fn={() => setSub(null)} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>📏 Peso y Talla</h2></div>
+        <SL>Peso (kg)</SL><input type="number" step="0.1" value={wK} onChange={e => setWK(e.target.value)} placeholder="6.2" style={{ width: "100%", padding: 14, borderRadius: 14, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 20, outline: "none", marginBottom: 14, fontWeight: 700, textAlign: "center" }} />
+        <SL>Talla (cm)</SL><input type="number" step="0.1" value={hC} onChange={e => setHC(e.target.value)} placeholder="62" style={{ width: "100%", padding: 14, borderRadius: 14, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 20, outline: "none", marginBottom: 14, fontWeight: 700, textAlign: "center" }} />
+        <SL>Fecha de medición (vacío = hoy)</SL><input type="date" value={gDate} onChange={e => setGDate(e.target.value)} style={{ width: "100%", padding: 11, borderRadius: 14, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, outline: "none", marginBottom: 16 }} />
+        <button onClick={addGrowth} disabled={!wK && !hC} style={{ width: "100%", padding: 15, borderRadius: 20, background: (wK || hC) ? "linear-gradient(135deg,#34D399,#10B981)" : T.border, color: "#fff", border: "none", cursor: (wK || hC) ? "pointer" : "default", fontSize: 16, fontWeight: 800 }}>Guardar ✓</button></div>}
+
+      {/* HISTORY */}
+      {view === "history" && !sub && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.3s ease" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}><h2 style={{ fontSize: 19, fontWeight: 900 }}>📊 Historial</h2>
+          {ent.length > 0 && hp("export_data") && <button onClick={exportCSV} style={{ padding: "5px 10px", borderRadius: 10, background: T.accent, color: "#fff", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>📥 CSV</button>}</div>
+        {ent.length === 0 ? <div style={{ textAlign: "center", padding: "50px 20px", color: T.soft }}><p style={{ fontSize: 40 }}>📝</p><p style={{ fontWeight: 700, marginTop: 8 }}>Sin registros</p></div>
+          : [...ent].reverse().map((e, i) => { const rt = REC.find(r => r.id === e.type) || {}; let d = "";
+            if (e.type === "feed") d = `${e.oz}oz · ${FT.find(f => f.id === e.feedType)?.l || ""}`;
+            else if (e.type === "diaper") d = DTP.find(x => x.id === e.diaperType)?.l || "";
+            else if (e.type === "sleep") d = `${e.sleepType === "nap" ? "Siesta" : "Noche"} · ${e.duration || "?"}min`;
+            else if (e.type === "temp") d = `${e.temp}°C${e.temp >= 38 ? " ⚠️" : ""}`;
+            else if (e.type === "growth") d = `${e.weight ? e.weight + "kg" : ""}${e.height ? " · " + e.height + "cm" : ""}`;
+            return <div key={e.id} style={{ ...CS, marginBottom: 4, padding: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 34, height: 34, borderRadius: 11, background: (rt.c || "#ddd") + (dark ? "15" : "12"), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>{rt.e}</div>
+                <div><p style={{ fontSize: 12, fontWeight: 700 }}>{d}</p><p style={{ fontSize: 10, color: T.soft }}>{fD(e.ts)} · {fmt(e.ts)}{e.by ? ` · ${e.by}` : ""}</p></div></div>
+              {hp("manage_family") && <button onClick={() => delE(e.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: T.soft, padding: 3 }}>✕</button>}</div>; })}</div>}
+
+      {/* MILESTONES */}
+      {view === "milestones" && !msD && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.3s ease" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}><Bk fn={() => setView("home")} /><div><h2 style={{ fontSize: 19, fontWeight: 900 }}>🌟 Hitos ({prof.ageRange})</h2><p style={{ fontSize: 11, color: T.soft }}>{msDone.length}/{milestones.length}</p></div></div>
+        <div style={{ height: 7, borderRadius: 4, background: T.border, marginBottom: 16, overflow: "hidden" }}><div style={{ height: "100%", borderRadius: 4, width: `${milestones.length ? (msDone.filter(m => milestones.find(x => x.id === m.id)).length / milestones.length) * 100 : 0}%`, background: `linear-gradient(90deg,#FDE68A,${T.ok})`, transition: "width 0.5s" }} /></div>
+        {milestones.map(m => { const dn = msDone.find(x => x.id === m.id); return (
+          <div key={m.id} style={{ ...CS, width: "100%", marginBottom: 5, padding: "11px 12px", display: "flex", alignItems: "center", gap: 10 }}>
+            <button onClick={() => togMs(m.id)} style={{ width: 26, height: 26, borderRadius: 8, flexShrink: 0, border: `2px solid ${dn ? T.ok : T.border}`, background: dn ? T.ok + "20" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: T.ok, fontWeight: 800, cursor: "pointer" }}>{dn ? "✓" : ""}</button>
+            <div style={{ flex: 1, cursor: "pointer" }} onClick={() => setMsD(m)}><p style={{ fontSize: 13, fontWeight: 700 }}>{m.e} {m.l}</p><p style={{ fontSize: 10, color: T.soft }}>~{m.m}m · info →</p></div>
+            {dn && <p style={{ fontSize: 10, color: T.ok, fontWeight: 700 }}>{fD(dn.at)}</p>}</div>); })}</div>}
+
+      {msD && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.3s ease" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}><Bk fn={() => setMsD(null)} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>Detalle</h2></div>
+        <div style={{ ...CS, padding: 20, textAlign: "center", marginBottom: 14 }}><span style={{ fontSize: 44 }}>{msD.e}</span><h3 style={{ fontSize: 18, fontWeight: 900, marginTop: 8 }}>{msD.l}</h3><p style={{ fontSize: 12, color: T.accent, fontWeight: 700 }}>~{msD.m} meses</p>
+          {msDone.find(x => x.id === msD.id) && <p style={{ fontSize: 11, color: T.ok, fontWeight: 700, marginTop: 4 }}>✓ {fD(msDone.find(x => x.id === msD.id).at)}</p>}</div>
+        <div style={{ ...CS, padding: 16 }}><p style={{ fontSize: 13, lineHeight: 1.6 }}>{msD.info}</p></div>
+        <button onClick={() => { togMs(msD.id); setMsD(null); }} style={{ width: "100%", padding: 14, borderRadius: 18, background: msDone.find(x => x.id === msD.id) ? T.border : `linear-gradient(135deg,${T.ok},#059669)`, color: msDone.find(x => x.id === msD.id) ? T.text : "#fff", border: "none", cursor: "pointer", fontSize: 15, fontWeight: 800, marginTop: 14 }}>{msDone.find(x => x.id === msD.id) ? "Desmarcar" : "Alcanzado ✓"}</button></div>}
+
+      {/* FAMILY */}
+      {view === "family" && !editM && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.3s ease" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}><Bk fn={() => { setView("home"); setInvStep(0); }} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>👨‍👩‍👧 Familia</h2></div>
+        <SL>Miembros</SL>
+        {mem.map(m => <div key={m.id} style={{ ...CS, marginBottom: 5, padding: "11px 12px", display: "flex", alignItems: "center", gap: 9 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 11, background: T.accentL, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>{ROLES.find(r => r.id === m.role)?.e || "👤"}</div>
+          <div style={{ flex: 1 }}><p style={{ fontSize: 13, fontWeight: 700 }}>{m.name}</p><p style={{ fontSize: 10, color: T.soft }}>{ROLES.find(r => r.id === m.role)?.l} · {m.perms?.length || 0} permisos</p></div>
+          {m.role !== "admin" && <><button onClick={() => setEditM(m)} style={{ padding: "4px 8px", borderRadius: 8, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 10, fontWeight: 700, color: T.soft }}>✏️</button>
+            <button onClick={() => remMem(m.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "#EF4444", padding: 2 }}>✕</button></>}</div>)}
+
+        {inv.filter(i => i.status === "pending").length > 0 && <><SL>Pendientes</SL>{inv.filter(i => i.status === "pending").map(x => <div key={x.id} style={{ ...CS, marginBottom: 5, padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 18 }}>📩</span><div style={{ flex: 1 }}><p style={{ fontSize: 13, fontWeight: 700 }}>{x.name}</p><p style={{ fontSize: 10, color: T.soft }}>Código: <strong>{x.code}</strong></p></div>
+          <button onClick={() => acceptInv(x.id)} style={{ padding: "5px 8px", borderRadius: 8, background: T.ok, color: "#fff", border: "none", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>Simular ✓</button></div>)}</>}
+
+        <div style={{ ...CS, padding: 14, marginTop: 12 }}>
+          <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>➕ Invitar familiar</p>
+
+          {invStep === 0 && <>
+            <input value={invN} onChange={e => setInvN(e.target.value)} placeholder="Nombre (ej: Abuela Rosa)" style={{ width: "100%", padding: 11, borderRadius: 12, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, outline: "none", marginBottom: 8 }} />
+            <SL>Rol base</SL>
+            <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>{ROLES.filter(r => r.id !== "admin").map(r => <button key={r.id} onClick={() => { setInvR(r.id); setInvPerms([...ROLE_DEFAULTS[r.id]]); }} style={{ flex: 1, padding: "8px 4px", borderRadius: 12, cursor: "pointer", background: invR === r.id ? T.accentL : T.card, border: `2px solid ${invR === r.id ? T.accent : T.border}`, textAlign: "center" }}><span style={{ fontSize: 18, display: "block" }}>{r.e}</span><span style={{ fontSize: 10, fontWeight: 700 }}>{r.l}</span></button>)}</div>
+            <button onClick={() => { if (invN.trim()) setInvStep(1); }} disabled={!invN.trim()} style={{ width: "100%", padding: 12, borderRadius: 14, background: invN.trim() ? T.accent : T.border, color: "#fff", border: "none", cursor: invN.trim() ? "pointer" : "default", fontSize: 13, fontWeight: 700 }}>Configurar permisos →</button>
+          </>}
+
+          {invStep === 1 && <>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <button onClick={() => setInvStep(0)} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14, color: T.text }}>←</button>
+              <div><p style={{ fontSize: 13, fontWeight: 700 }}>{invN}</p><p style={{ fontSize: 10, color: T.soft }}>{ROLES.find(r => r.id === invR)?.e} {ROLES.find(r => r.id === invR)?.l}</p></div>
+            </div>
+            <p style={{ fontSize: 11, color: T.soft, marginBottom: 8 }}>Elige qué puede hacer:</p>
+            {PERMS_LIST.map(p => { const on = invPerms.includes(p.id); return (
+              <button key={p.id} onClick={() => setInvPerms(prev => prev.includes(p.id) ? prev.filter(x => x !== p.id) : [...prev, p.id])} style={{ width: "100%", marginBottom: 3, padding: "8px 10px", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", border: `1.5px solid ${on ? T.ok + "55" : T.border}`, background: on ? T.ok + "08" : T.card }}>
+                <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${on ? T.ok : T.border}`, background: on ? T.ok + "22" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: T.ok, fontWeight: 800, flexShrink: 0 }}>{on ? "✓" : ""}</div>
+                <span style={{ fontSize: 14 }}>{p.cat}</span><p style={{ fontSize: 12, fontWeight: 600, flex: 1 }}>{p.l}</p></button>); })}
+            <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+              <button onClick={() => setInvPerms([...ROLE_DEFAULTS[invR]])} style={{ flex: 1, padding: 10, borderRadius: 12, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 11, fontWeight: 700 }}>Reset defaults</button>
+              <button onClick={() => { createInv(); setInvStep(2); }} style={{ flex: 2, padding: 10, borderRadius: 12, background: T.accent, color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>Generar invitación 📤</button>
+            </div>
+          </>}
+
+          {invStep === 2 && <>
+            <div style={{ textAlign: "center", padding: "12px 0" }}>
+              <p style={{ fontSize: 36, marginBottom: 8 }}>✅</p>
+              <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>¡Invitación creada!</p>
+              <p style={{ fontSize: 12, color: T.soft, marginBottom: 12 }}>Comparte el código por WhatsApp</p>
+              {inv.length > 0 && <div style={{ background: T.accentL, borderRadius: 14, padding: "12px 16px", display: "inline-block", marginBottom: 12 }}>
+                <p style={{ fontSize: 28, fontWeight: 900, color: T.accent, letterSpacing: 4 }}>{inv[inv.length - 1]?.code}</p>
+              </div>}
+              <br />
+              <button onClick={() => setInvStep(0)} style={{ padding: "10px 24px", borderRadius: 14, background: T.accent, color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>Invitar a otro</button>
+            </div>
+          </>}
+        </div>
+
+        <div style={{ ...CS, padding: 14, marginTop: 12 }}>
+          <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 6 }}>🔄 Simular vista</p>
+          <div style={{ display: "flex", gap: 5 }}>{ROLES.map(r => <button key={r.id} onClick={() => switchU(r.id, r.id === "admin" ? mem.find(m => m.role === "admin")?.name || "Admin" : "Demo")} style={{ flex: 1, padding: "8px 3px", borderRadius: 10, cursor: "pointer", background: cu.role === r.id ? T.accent : T.card, color: cu.role === r.id ? "#fff" : T.text, border: `1.5px solid ${cu.role === r.id ? T.accent : T.border}`, fontSize: 10, fontWeight: 700, textAlign: "center" }}>{r.e} {r.l}</button>)}</div></div>
+      </div>}
+
+      {/* EDIT PERMS */}
+      {editM && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.3s ease" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}><Bk fn={() => setEditM(null)} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>Permisos: {editM.name}</h2></div>
+        <p style={{ fontSize: 12, color: T.soft, marginBottom: 12 }}>Elige qué puede hacer en la app</p>
+        {PERMS_LIST.map(p => { const on = editM.perms?.includes(p.id); return (
+          <button key={p.id} onClick={() => updMemP(editM.id, p.id)} style={{ ...CS, width: "100%", marginBottom: 4, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", border: `1.5px solid ${on ? T.ok + "55" : T.border}`, background: on ? T.ok + "08" : T.card }}>
+            <div style={{ width: 24, height: 24, borderRadius: 7, border: `2px solid ${on ? T.ok : T.border}`, background: on ? T.ok + "22" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: T.ok, fontWeight: 800 }}>{on ? "✓" : ""}</div>
+            <span style={{ fontSize: 16 }}>{p.cat}</span><p style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{p.l}</p></button>); })}
+        <button onClick={() => setEditM(null)} style={{ width: "100%", padding: 14, borderRadius: 18, background: T.accent, color: "#fff", border: "none", cursor: "pointer", fontSize: 15, fontWeight: 800, marginTop: 12 }}>Listo ✓</button></div>}
+
+      {/* TASKS */}
+      {view === "tasks" && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.3s ease" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}><Bk fn={() => setView("home")} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>📌 Tareas</h2></div>
+
+        {!tF_show ? <button onClick={() => setTFShow(true)} style={{ width: "100%", padding: 12, borderRadius: 14, background: T.accent, color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, marginBottom: 12 }}>+ Nueva tarea</button>
+          : <div style={{ ...CS, padding: 14, marginBottom: 12 }}>
+            <input value={tF_title} onChange={e => setTFTitle(e.target.value)} placeholder="Título (ej: Vacuna 6 meses)" style={{ width: "100%", padding: 10, borderRadius: 12, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, outline: "none", marginBottom: 8 }} />
+            <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+              <div style={{ flex: 1 }}><SL>Fecha</SL><input type="date" value={tF_date} onChange={e => setTFDate(e.target.value)} style={{ width: "100%", padding: 8, borderRadius: 10, border: `1px solid ${T.border}`, background: T.card, fontSize: 12, outline: "none" }} /></div>
+              <div style={{ flex: 1 }}><SL>Hora</SL><input type="time" value={tF_time} onChange={e => setTFTime(e.target.value)} style={{ width: "100%", padding: 8, borderRadius: 10, border: `1px solid ${T.border}`, background: T.card, fontSize: 12, outline: "none" }} /></div></div>
+            <SL>Categoría</SL>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>{TASK_CATS.map(c => <button key={c.id} onClick={() => setTFCat(c.id)} style={{ padding: "5px 10px", borderRadius: 10, cursor: "pointer", background: tF_cat === c.id ? c.c + "20" : T.card, border: `1.5px solid ${tF_cat === c.id ? c.c : T.border}`, fontSize: 11, fontWeight: tF_cat === c.id ? 800 : 600 }}>{c.e} {c.l}</button>)}</div>
+            <SL>Asignar a</SL>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>
+              {mem.map(m => <button key={m.id} onClick={() => setTFAssign(m.name)} style={{ padding: "5px 10px", borderRadius: 10, cursor: "pointer", background: tF_assign === m.name ? T.accentL : T.card, border: `1.5px solid ${tF_assign === m.name ? T.accent : T.border}`, fontSize: 11, fontWeight: tF_assign === m.name ? 800 : 600 }}>{m.name}</button>)}
+              {mem.length === 0 && <p style={{ fontSize: 11, color: T.soft }}>Se asigna a ti</p>}</div>
+            <SL>Repetir</SL>
+            <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>{TASK_REPEAT.map(r => <button key={r.id} onClick={() => setTFRepeat(r.id)} style={{ padding: "5px 10px", borderRadius: 10, cursor: "pointer", background: tF_repeat === r.id ? T.accentL : T.card, border: `1.5px solid ${tF_repeat === r.id ? T.accent : T.border}`, fontSize: 11, fontWeight: tF_repeat === r.id ? 800 : 600 }}>{r.l}</button>)}</div>
+            <textarea value={tF_notes} onChange={e => setTFNotes(e.target.value)} placeholder="Notas (opcional)" style={{ width: "100%", padding: 8, borderRadius: 10, border: `1px solid ${T.border}`, background: T.card, fontSize: 12, resize: "none", height: 40, outline: "none", marginBottom: 8 }} />
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={() => setTFShow(false)} style={{ flex: 1, padding: 10, borderRadius: 12, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>Cancelar</button>
+              <button onClick={addTask} disabled={!tF_title.trim()} style={{ flex: 2, padding: 10, borderRadius: 12, background: tF_title.trim() ? T.accent : T.border, color: "#fff", border: "none", cursor: tF_title.trim() ? "pointer" : "default", fontSize: 12, fontWeight: 700 }}>Guardar</button></div></div>}
+
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>{[{ id: "pending", l: `Pendientes (${pendingTasks.length})` }, { id: "done", l: `Completadas (${doneTasks.length})` }].map(t =>
+          <button key={t.id} onClick={() => setTaskTab(t.id)} style={{ flex: 1, padding: "8px 6px", borderRadius: 12, cursor: "pointer", background: taskTab === t.id ? T.accent : T.card, color: taskTab === t.id ? "#fff" : T.text, border: `1.5px solid ${taskTab === t.id ? T.accent : T.border}`, fontSize: 11, fontWeight: 700 }}>{t.l}</button>)}</div>
+
+        {overdueTasks.length > 0 && taskTab === "pending" && <><SL>⚠️ Vencidas</SL>
+          {overdueTasks.map(t => { const cat = TASK_CATS.find(c => c.id === t.cat); return (
+            <div key={t.id} style={{ ...CS, marginBottom: 4, padding: "10px 12px", display: "flex", alignItems: "center", gap: 8, border: `1.5px solid #EF444433` }}>
+              <button onClick={() => togTask(t.id)} style={{ width: 24, height: 24, borderRadius: 7, border: `2px solid ${T.accent}`, background: "transparent", cursor: "pointer", flexShrink: 0 }} />
+              <div style={{ flex: 1 }}><p style={{ fontSize: 12, fontWeight: 700 }}>{cat?.e} {t.title}</p>
+                <p style={{ fontSize: 10, color: "#EF4444", fontWeight: 700 }}>{fDShort(t.date)}{t.time ? ` ${t.time}` : ""} · {t.assignee}</p></div>
+              <button onClick={() => delTask(t.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: T.soft }}>✕</button></div>); })}</>}
+
+        {taskTab === "pending" && pendingTasks.filter(t => !t.date || (!isPastDate(t.date))).length > 0 && <>
+          {todayTasks.length > 0 && <SL>📅 Hoy</SL>}
+          {todayTasks.map(t => { const cat = TASK_CATS.find(c => c.id === t.cat); return (
+            <div key={t.id} style={{ ...CS, marginBottom: 4, padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+              <button onClick={() => togTask(t.id)} style={{ width: 24, height: 24, borderRadius: 7, border: `2px solid ${cat?.c || T.accent}`, background: "transparent", cursor: "pointer", flexShrink: 0 }} />
+              <div style={{ flex: 1 }}><p style={{ fontSize: 12, fontWeight: 700 }}>{cat?.e} {t.title}</p>
+                <p style={{ fontSize: 10, color: T.soft }}>{t.time || "Todo el día"} · {t.assignee}{t.repeat !== "once" ? ` · 🔁${TASK_REPEAT.find(r => r.id === t.repeat)?.l}` : ""}</p>
+                {t.notes && <p style={{ fontSize: 10, color: T.soft, fontStyle: "italic" }}>{t.notes}</p>}</div>
+              <button onClick={() => delTask(t.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: T.soft }}>✕</button></div>); })}
+
+          {pendingTasks.filter(t => t.date && !isToday(t.date) && !isPastDate(t.date)).length > 0 && <SL>📆 Próximas</SL>}
+          {pendingTasks.filter(t => t.date && !isToday(t.date) && !isPastDate(t.date)).map(t => { const cat = TASK_CATS.find(c => c.id === t.cat); return (
+            <div key={t.id} style={{ ...CS, marginBottom: 4, padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+              <button onClick={() => togTask(t.id)} style={{ width: 24, height: 24, borderRadius: 7, border: `2px solid ${T.border}`, background: "transparent", cursor: "pointer", flexShrink: 0 }} />
+              <div style={{ flex: 1 }}><p style={{ fontSize: 12, fontWeight: 700 }}>{cat?.e} {t.title}</p>
+                <p style={{ fontSize: 10, color: T.soft }}>{fDShort(t.date)}{t.time ? ` ${t.time}` : ""} · {t.assignee}</p></div>
+              <button onClick={() => delTask(t.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: T.soft }}>✕</button></div>); })}
+
+          {pendingTasks.filter(t => !t.date).length > 0 && <SL>📋 Sin fecha</SL>}
+          {pendingTasks.filter(t => !t.date).map(t => { const cat = TASK_CATS.find(c => c.id === t.cat); return (
+            <div key={t.id} style={{ ...CS, marginBottom: 4, padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+              <button onClick={() => togTask(t.id)} style={{ width: 24, height: 24, borderRadius: 7, border: `2px solid ${T.border}`, background: "transparent", cursor: "pointer", flexShrink: 0 }} />
+              <div style={{ flex: 1 }}><p style={{ fontSize: 12, fontWeight: 700 }}>{cat?.e} {t.title}</p>
+                <p style={{ fontSize: 10, color: T.soft }}>{t.assignee}</p></div>
+              <button onClick={() => delTask(t.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: T.soft }}>✕</button></div>); })}</>}
+
+        {taskTab === "done" && doneTasks.length === 0 && <div style={{ textAlign: "center", padding: "40px 20px", color: T.soft }}><p style={{ fontSize: 40 }}>✅</p><p style={{ fontWeight: 700, marginTop: 8 }}>Sin completadas</p></div>}
+        {taskTab === "done" && doneTasks.map(t => { const cat = TASK_CATS.find(c => c.id === t.cat); return (
+          <div key={t.id} style={{ ...CS, marginBottom: 4, padding: "10px 12px", display: "flex", alignItems: "center", gap: 8, opacity: 0.5 }}>
+            <div onClick={() => togTask(t.id)} style={{ width: 24, height: 24, borderRadius: 7, border: `2px solid ${T.ok}`, background: T.ok + "20", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: T.ok, cursor: "pointer" }}>✓</div>
+            <div style={{ flex: 1 }}><p style={{ fontSize: 12, textDecoration: "line-through" }}>{cat?.e} {t.title}</p>
+              <p style={{ fontSize: 10, color: T.soft }}>{t.doneAt ? fDShort(t.doneAt) : ""} · {t.assignee}</p></div>
+            <button onClick={() => delTask(t.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: T.soft }}>✕</button></div>); })}
+      </div>}
+
+      {/* AI */}
+      {view === "ai" && !sub && hp("use_ai") && <div style={{ padding: "12px 16px 0", animation: "fadeUp 0.3s ease", display: "flex", flexDirection: "column", height: "calc(100vh - 68px)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 34, height: 34, borderRadius: 12, background: "linear-gradient(135deg,#C4B5FD,#818CF8)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>🤖</div>
+            <div><p style={{ fontSize: 15, fontWeight: 900 }}>Asistente IA</p><p style={{ fontSize: 10, color: T.soft }}>{aiMsgs.length} msgs</p></div></div>
+          <div style={{ display: "flex", gap: 4 }}>
+            <button onClick={() => setQuickM(!quickM)} style={{ padding: "4px 7px", borderRadius: 8, background: quickM ? T.accent : T.card, color: quickM ? "#fff" : T.soft, border: `1px solid ${quickM ? T.accent : T.border}`, cursor: "pointer", fontSize: 10, fontWeight: 700 }}>⚡</button>
+            {aiMsgs.length > 0 && <button onClick={() => { setAiMsgs([]); data.clearAiMessages(); }} style={{ padding: "4px 7px", borderRadius: 8, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 10, color: T.soft }}>🗑️</button>}</div></div>
+        <div style={{ flex: 1, overflowY: "auto", paddingBottom: 6, display: "flex", flexDirection: "column", gap: 6 }}>
+          {aiMsgs.length === 0 && <div style={{ textAlign: "center", padding: "14px 6px" }}><p style={{ fontSize: 30, marginBottom: 6 }}>💬</p><p style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>Pregunta sobre {prof.name || "tu bebé"}</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "center" }}>{(quickM ? QQS : QQS.slice(0, 6)).map((q, i) => <button key={i} onClick={() => { if (quickM) askAI(q); else setAiIn(q); }} style={{ padding: "6px 10px", borderRadius: 12, background: T.card, border: `1px solid ${T.border}`, fontSize: 11, color: T.soft, cursor: "pointer" }}>{q}</button>)}</div></div>}
+          {aiMsgs.map((m, i) => <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "85%", animation: "fadeUp 0.15s ease" }}><div style={{ padding: "8px 12px", borderRadius: 16, fontSize: 13, lineHeight: 1.5, whiteSpace: "pre-wrap", background: m.role === "user" ? `linear-gradient(135deg,${T.accent},#D4623C)` : T.card, color: m.role === "user" ? "#fff" : T.text, border: m.role === "user" ? "none" : `1px solid ${T.border}`, borderBottomRightRadius: m.role === "user" ? 4 : 16, borderBottomLeftRadius: m.role === "user" ? 16 : 4 }}>{m.text}</div></div>)}
+          {aiL && <div style={{ alignSelf: "flex-start", padding: "10px 14px", background: T.card, borderRadius: 14, border: `1px solid ${T.border}`, display: "flex", gap: 4 }}>{[0, 1, 2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: T.accent, animation: `dotP 1.4s ease ${i * 0.2}s infinite` }} />)}</div>}
+          <div ref={chatRef} /></div>
+        {quickM && aiMsgs.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: "4px 0" }}>{QQS.slice(0, 4).map((q, i) => <button key={i} onClick={() => askAI(q)} style={{ padding: "4px 8px", borderRadius: 10, background: T.card, border: `1px solid ${T.border}`, fontSize: 10, color: T.soft, cursor: "pointer" }}>{q}</button>)}</div>}
+        <div style={{ padding: "8px 0 14px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 6, background: T.bg }}><input value={aiIn} onChange={e => setAiIn(e.target.value)} onKeyDown={e => e.key === "Enter" && askAI()} placeholder="Pregunta..." style={{ flex: 1, padding: "11px 14px", borderRadius: 16, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, outline: "none" }} />
+          <button onClick={() => askAI()} disabled={aiL || !aiIn.trim()} style={{ width: 42, height: 42, borderRadius: 14, background: aiIn.trim() ? T.accent : T.border, border: "none", cursor: aiIn.trim() ? "pointer" : "default", color: "#fff", fontSize: 16 }}>↑</button></div>
+      </div>}
+
+      {/* QUESTIONS */}
+      {view === "questions" && !sub && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.3s ease" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}><Bk fn={() => setView("home")} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>📋 Preguntas</h2></div>
+        {hp("ask_questions") && <div style={{ display: "flex", gap: 6, marginBottom: 14 }}><input value={nq} onChange={e => setNq(e.target.value)} onKeyDown={e => e.key === "Enter" && addQ()} placeholder="Nueva pregunta..." style={{ flex: 1, padding: "11px 14px", borderRadius: 14, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, outline: "none" }} />
+          <button onClick={addQ} style={{ width: 42, height: 42, borderRadius: 14, background: T.accent, border: "none", cursor: "pointer", color: "#fff", fontSize: 18 }}>+</button></div>}
+        {hp("view_questions") && qs.filter(q => q.status === "pending").length > 0 && <><SL>Pendientes</SL>
+          {qs.filter(q => q.status === "pending").map(q => <div key={q.id} style={{ ...CS, marginBottom: 4, padding: "9px 11px", display: "flex", alignItems: "center", gap: 8 }}>
+            {hp("ask_questions") && <button onClick={() => togQ(q.id)} style={{ width: 24, height: 24, borderRadius: 7, flexShrink: 0, border: `2px solid ${T.accent}`, background: "transparent", cursor: "pointer" }} />}
+            <div style={{ flex: 1 }}><p style={{ fontSize: 13, fontWeight: 600 }}>{q.text}</p><p style={{ fontSize: 10, color: T.soft }}>{q.by ? `Por ${q.by}` : ""}{q.ts ? ` · ${fD(q.ts)}` : ""}</p></div>
+            {hp("ask_questions") && <button onClick={() => delQ(q.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: T.soft }}>✕</button>}</div>)}</>}
+        {hp("view_questions") && qs.filter(q => q.status === "done").length > 0 && <><SL>Respondidas</SL>
+          {qs.filter(q => q.status === "done").map(q => <div key={q.id} style={{ ...CS, marginBottom: 4, padding: "9px 11px", display: "flex", alignItems: "center", gap: 8, opacity: 0.4 }}>
+            {hp("ask_questions") && <div onClick={() => togQ(q.id)} style={{ width: 24, height: 24, borderRadius: 7, border: `2px solid ${T.ok}`, background: T.ok + "20", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: T.ok, cursor: "pointer" }}>✓</div>}
+            <div style={{ flex: 1 }}><p style={{ fontSize: 13, textDecoration: "line-through" }}>{q.text}</p><p style={{ fontSize: 10, color: T.soft }}>{q.by ? `Por ${q.by}` : ""}</p></div></div>)}</>}
+        {!hp("view_questions") && !hp("ask_questions") && <div style={{ textAlign: "center", padding: "40px 20px", color: T.soft }}><p style={{ fontSize: 14 }}>No tienes acceso a preguntas</p></div>}
+      </div>}
+
+      {/* PROFILE */}
+      {view === "profile" && !sub && hp("manage_family") && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.3s ease" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}><Bk fn={() => setView("home")} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>⚙️ Perfil</h2></div>
+        <div style={{ ...CS, padding: 18, marginBottom: 10, textAlign: "center" }}>
+          <div onClick={() => fileRef.current?.click()} style={{ cursor: "pointer", display: "inline-block", position: "relative", marginBottom: 8 }}><Av sz={64} />
+            <div style={{ position: "absolute", bottom: -2, right: -2, width: 22, height: 22, borderRadius: 8, background: T.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff" }}>✏️</div></div>
+          <br /><input value={prof.name} onChange={e => setProf(p => ({ ...p, name: e.target.value }))} style={{ fontSize: 20, fontWeight: 900, border: "none", borderBottom: `2px solid ${T.accent}`, outline: "none", background: "transparent", textAlign: "center", width: "80%", padding: "2px 0" }} /></div>
+        <div style={{ ...CS, padding: 14, marginBottom: 8 }}><SL>Fecha de nacimiento</SL>
+          <input type="date" value={prof.birthDate || ""} onChange={e => setProf(p => ({ ...p, birthDate: e.target.value }))} style={{ width: "100%", padding: 11, borderRadius: 12, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 14, outline: "none", fontWeight: 700, marginBottom: 6 }} />
+          {prof.birthDate && <p style={{ fontSize: 13, color: T.accent, fontWeight: 700 }}>🎂 {fmtAge(prof.birthDate)} · {prof.ageRange}</p>}
+          {!prof.birthDate && <><p style={{ fontSize: 11, color: T.soft, marginBottom: 6 }}>O rango manual:</p><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+          {["0-3 meses", "3-6 meses", "6-9 meses", "9-12 meses"].map(a => <button key={a} onClick={() => setProf(p => ({ ...p, ageRange: a }))} style={{ padding: 10, borderRadius: 12, cursor: "pointer", background: prof.ageRange === a ? T.accentL : T.card, border: `2px solid ${prof.ageRange === a ? T.accent : T.border}`, fontSize: 12, fontWeight: prof.ageRange === a ? 800 : 600, color: prof.ageRange === a ? T.accent : T.text }}>{a}</button>)}</div></>}</div>
+        <div style={{ ...CS, padding: 14, marginBottom: 8 }}><SL>Tema</SL><button onClick={() => setDark(!dark)} style={{ width: "100%", padding: 11, borderRadius: 12, background: T.card, border: `1.5px solid ${T.border}`, cursor: "pointer", fontSize: 13, fontWeight: 700 }}>{dark ? "☀️ Claro" : "🌙 Oscuro"}</button></div>
+        {hp("export_data") && <div style={{ ...CS, padding: 14, marginBottom: 8 }}><SL>Exportar</SL><button onClick={exportCSV} style={{ width: "100%", padding: 11, borderRadius: 12, background: T.accent, color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>📥 CSV ({ent.length} registros)</button></div>}
+        <div style={{ ...CS, padding: 14 }}><SL>Datos</SL><p style={{ fontSize: 12, color: T.soft, marginBottom: 6 }}>📊 {ent.length} registros · 📋 {qs.length} preguntas · 🌟 {msDone.length} hitos · 💬 {aiMsgs.length} IA · 👥 {mem.length} miembros</p>
+          <button onClick={resetAll} style={{ width: "100%", padding: 10, borderRadius: 12, background: dark ? "#2D0F0F" : "#FEE2E2", color: "#EF4444", border: `1px solid ${dark ? "#441111" : "#FECACA"}`, cursor: "pointer", fontSize: 12, fontWeight: 700, marginTop: 6 }}>Borrar todo y reiniciar</button></div>
+      </div>}
+
+      {/* NAV */}
+      {!sub && !msD && !editM && <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: T.glass, backdropFilter: "blur(20px)", borderTop: `1px solid ${T.border}`, display: "flex", justifyContent: "space-around", padding: "4px 3px 14px", zIndex: 100 }}>
+        {[
+          { id: "home", i: "🏠", l: "Inicio", show: true },
+          { id: "history", i: "📊", l: "Historial", show: hp("view_history") },
+          { id: "ai", i: "🤖", l: "IA", show: hp("use_ai") },
+          { id: "tasks", i: "📌", l: "Tareas", b: pendingTasks.length, show: true },
+          { id: "questions", i: "📋", l: "Preguntas", b: qs.filter(q => q.status === "pending").length, show: hp("view_questions") || hp("ask_questions") },
+        ].filter(x => x.show).map(x =>
+          <button key={x.id} onClick={() => { setView(x.id); setSub(null); }} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 1, padding: "4px 12px", position: "relative" }}>
+            {x.b > 0 && <div style={{ position: "absolute", top: -2, right: 4, minWidth: 14, height: 14, borderRadius: 7, background: T.accent, color: "#fff", fontSize: 8, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>{x.b}</div>}
+            <span style={{ fontSize: 20 }}>{x.i}</span><span style={{ fontSize: 10, fontWeight: view === x.id ? 800 : 600, color: view === x.id ? T.accent : T.soft }}>{x.l}</span>
+            {view === x.id && <div style={{ width: 16, height: 2.5, borderRadius: 2, background: T.accent }} />}</button>)}</div>}
+    </div>
+  );
+}
