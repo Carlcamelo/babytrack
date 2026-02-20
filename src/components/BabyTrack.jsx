@@ -460,25 +460,63 @@ export default function BabyTrack({ auth, data }) {
   const askAI = async ov => {
     const msg = ov || aiIn; if (!msg.trim()) return; if (!ov) setAiIn("");
     setAiMsgs(p => [...p, { role: "user", text: msg }]); setAiL(true); data.addAiMessage("user", msg);
-    const ctx = `Eres asistente pediátrico (AAP/OMS). Español. Simple y cálido.
-Bebé: ${prof.name || "bebé"}, ${prof.birthDate ? fmtAge(prof.birthDate) : prof.ageRange}, ${prof.gender === "female" ? "niña" : "niño"}.
+
+    const systemPrompt = `Eres un asistente clínicamente prudente especializado en desarrollo infantil 0-12 meses.
+
+CONTEXTO DEL BEBE:
+- Nombre: Ele
+- Nacimiento: 2025-09-22T07:15:00 (Bogota)
+- Parto vaginal, sin complicaciones
+- Vacunas al dia
+- Padre: Carlos, alta involucración, necesita datos exactos y evidencia
+
+MEMORIA:
+- Regresion de sueno 4 meses (semana 16-18)
+- Episodio febril evaluado en urgencias (viral, evolucion favorable)
+- Consolidacion post-regresion desde semana 18
+- Patron sueno: estabilidad progresiva, trigger comun: sobreestimulacion
+- Miedo principal: SMSL (riesgo muy bajo por edad creciente)
+
+EVIDENCIA BASE:
+- SMSL: pico 1-4 meses, factores protectores: boca arriba, superficie firme, evitar sobrecalentamiento, vacunas al dia
+- Fiebre >3 meses: evaluar si >=38C, urgencias si >=39C persistente + dificultad respiratoria/letargo/deshidratacion
+- Sueno 4 meses: reorganizacion neurologica normal, dura 2-6 semanas
+- Formula: desechar tras 1h si inicio toma, refrigerada sin tocar hasta 24h
+
+REGLAS:
+1. Siempre calcular edad exacta desde fecha de nacimiento
+2. Usar rangos, nunca prometer fechas exactas de eventos biologicos
+3. Diferenciar lo que sabemos del bebe vs evidencia general
+4. Dar: edad actual, que pasa fisiologicamente, que hacer hoy, que esperar, senales de urgencia
+5. Nunca inventar porcentajes ni minimizar fiebre en lactantes
+6. Tono: profesional, calmado, basado en evidencia, sin dramatizar ni invalidar emociones
+7. Responder en espanol, conciso (max 200 palabras)
+
+DATOS DE HOY:
 Quien pregunta: ${cu.name} (${FAMILY_ROLES.find(r => r.id === cu.familyRole)?.l || "cuidador"}).
-Hoy: ${tF.length} tomas(${tOz}oz total[${nursingToday}pecho+${tF.length - nursingToday}fórmula/extraída], meta:${goals.ozLabel}), ${tD} pañales(${tWet}mojados/${tPoo}popó, meta:${goals.wetLabel}), sueño:${tSlH}h(meta:${goals.sleepLabel}). Prom7d:${a7}oz/día.${nextBreast ? ` Próx.toma→${nextBreast === "left" ? "izquierdo" : "derecho"}.` : ""}
-${lG ? `Peso:${lG.weight}kg Talla:${lG.height}cm` : ""} ${lT ? `Temp:${lT.temp}°C` : ""}
+Tomas: ${tF.length} (${tOz}oz total, ${nursingToday} pecho + ${tF.length - nursingToday} fórmula/extraída, meta: ${goals.ozLabel}).
+Pañales: ${tD} (${tWet} mojados / ${tPoo} popó, meta: ${goals.wetLabel}).
+Sueño: ${tSlH}h (meta: ${goals.sleepLabel}). Promedio 7d: ${a7}oz/día.${nextBreast ? ` Próx. toma → pecho ${nextBreast === "left" ? "izquierdo" : "derecho"}.` : ""}
+${lG ? `Peso: ${lG.weight}kg, Talla: ${lG.height}cm.` : ""}${lT ? ` Temp: ${lT.temp}°C.` : ""}
 Score: ${dailyScore}/100 (🍼${feedScore}/30 😴${sleepScore}/30 🧷${wetScore}/20 🌡️${tempScore}/10).
-Preguntas pediatra:[${qs.filter(q => q.status === "pending").map(q => q.text).join(",")}]
-Tareas:[${pendingTasks.slice(0, 5).map(t => `${t.title}(${t.date || "?"},${t.assignee})`).join(",")}]
-Hitos:[${msDone.map(m => milestones.find(x => x.id === m.id)?.l).filter(Boolean).join(",")}]
-Últimos 20:${JSON.stringify(ent.slice(-20))}
-Conciso(máx 150 palabras). Si preocupa→pediatra. Medidas en oz.`;
+Preguntas al pediatra: [${qs.filter(q => q.status === "pending").map(q => q.text).join("; ")}]
+Tareas pendientes: [${pendingTasks.slice(0, 5).map(t => `${t.title} (${t.date || "?"}, ${t.assignee})`).join("; ")}]
+Hitos alcanzados: [${msDone.map(m => milestones.find(x => x.id === m.id)?.l).filter(Boolean).join(", ")}]
+Últimas 20 entradas: ${JSON.stringify(ent.slice(-20))}`;
+
+    const contents = [
+      ...aiMsgs.slice(-20).map(m => ({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.text }] })),
+      { role: "user", parts: [{ text: msg }] },
+    ];
+
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, system: ctx,
-          messages: [...aiMsgs.slice(-20).map(m => ({ role: m.role === "user" ? "user" : "assistant", content: m.text })), { role: "user", content: msg }] })
-      });
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${import.meta.env.VITE_GEMINI_KEY}`,
+        { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents, systemInstruction: { parts: [{ text: systemPrompt }] } }) }
+      );
       const data2 = await res.json();
-      const aiText = data2.content?.map(c => c.text || "").join("") || "Error.";
+      const aiText = data2.candidates?.[0]?.content?.parts?.[0]?.text || "Error al obtener respuesta.";
       setAiMsgs(p => [...p, { role: "assistant", text: aiText }]); data.addAiMessage("assistant", aiText);
     } catch { setAiMsgs(p => [...p, { role: "assistant", text: "⚠️ Sin conexión." }]); }
     setAiL(false);
