@@ -25,6 +25,13 @@ export function useAuth() {
   }, []);
 
   const loadProfile = async (userId) => {
+    // Si hay un código de invitación pendiente (guardado durante el signup),
+    // unir al usuario a esa familia antes de cargar el perfil
+    const pendingCode = localStorage.getItem('pendingInviteCode');
+    if (pendingCode) {
+      localStorage.removeItem('pendingInviteCode');
+      await supabase.rpc('join_family', { invite_code: pendingCode.trim().toUpperCase() });
+    }
     const { data } = await supabase
       .from('profiles')
       .select('*')
@@ -32,6 +39,16 @@ export function useAuth() {
       .single();
     setProfile(data);
     setLoading(false);
+  };
+
+  const joinFamily = async (code) => {
+    const { data, error } = await supabase.rpc('join_family', { invite_code: code.trim().toUpperCase() });
+    if (error) return { error: error.message };
+    if (data?.error) return { error: data.error };
+    // Recargar perfil para obtener el nuevo family_id
+    const { data: profileData } = await supabase.from('profiles').select('*').eq('id', (await supabase.auth.getUser()).data.user?.id).single();
+    if (profileData) setProfile(profileData);
+    return { success: true };
   };
 
   const signUp = async (email, password, name) => {
@@ -74,5 +91,5 @@ export function useAuth() {
     return { data, error };
   };
 
-  return { user, profile, loading, signUp, signIn, signInWithGoogle, signOut, updateProfile, loadProfile };
+  return { user, profile, loading, signUp, signIn, signInWithGoogle, signOut, updateProfile, loadProfile, joinFamily };
 }

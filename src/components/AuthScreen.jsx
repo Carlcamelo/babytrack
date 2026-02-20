@@ -7,15 +7,19 @@ export default function AuthScreen({ onAuth, T }) {
   const [name, setName] = useState('');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
+  const [showCode, setShowCode] = useState(false);
 
   const handleSubmit = async () => {
     setErr('');
     setLoading(true);
     try {
       if (mode === 'signup') {
+        // Guardar código en localStorage antes del signup para procesarlo al confirmar email
+        if (inviteCode.trim()) localStorage.setItem('pendingInviteCode', inviteCode.trim().toUpperCase());
         const { error } = await onAuth.signUp(email, pass, name);
-        if (error) setErr(error.message);
-        else setErr('¡Revisa tu email para confirmar! 📧');
+        if (error) { localStorage.removeItem('pendingInviteCode'); setErr(error.message); }
+        else setErr(inviteCode.trim() ? '¡Revisa tu email! Al confirmar, te unirás a la familia 👨‍👩‍👧' : '¡Revisa tu email para confirmar! 📧');
       } else {
         const { error } = await onAuth.signIn(email, pass);
         if (error) setErr(error.message === 'Invalid login credentials' ? 'Email o contraseña incorrectos' : error.message);
@@ -53,7 +57,15 @@ export default function AuthScreen({ onAuth, T }) {
       </div>
 
       {mode === 'signup' && (
-        <input value={name} onChange={e => setName(e.target.value)} placeholder="Tu nombre" style={{ width: '100%', padding: '14px 16px', borderRadius: 16, border: '2px solid #E8E5E0', fontSize: 16, outline: 'none', fontWeight: 700, background: '#fff', marginBottom: 10 }} />
+        <>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Tu nombre" style={{ width: '100%', padding: '14px 16px', borderRadius: 16, border: '2px solid #E8E5E0', fontSize: 16, outline: 'none', fontWeight: 700, background: '#fff', marginBottom: 10 }} />
+          <button onClick={() => { setShowCode(!showCode); setInviteCode(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: showCode ? '#999' : T.accent, fontWeight: 700, textAlign: 'left', width: '100%', padding: '0 0 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
+            🎟 {showCode ? 'Sin código de invitación' : '¿Te invitaron? Ingresa tu código'}
+          </button>
+          {showCode && (
+            <input value={inviteCode} onChange={e => setInviteCode(e.target.value.toUpperCase())} placeholder="ABC123" maxLength={6} style={{ width: '100%', padding: '14px 16px', borderRadius: 16, border: `2px solid ${T.accent}`, fontSize: 22, outline: 'none', fontWeight: 900, background: '#fff', marginBottom: 10, textAlign: 'center', letterSpacing: 8 }} />
+          )}
+        </>
       )}
 
       <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" style={{ width: '100%', padding: '14px 16px', borderRadius: 16, border: '2px solid #E8E5E0', fontSize: 16, outline: 'none', fontWeight: 700, background: '#fff', marginBottom: 10 }} />
@@ -66,7 +78,7 @@ export default function AuthScreen({ onAuth, T }) {
         {loading ? '...' : mode === 'login' ? 'Entrar' : 'Crear cuenta'}
       </button>
 
-      <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setErr(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: T.accent, fontWeight: 700, textAlign: 'center', width: '100%' }}>
+      <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setErr(''); setShowCode(false); setInviteCode(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: T.accent, fontWeight: 700, textAlign: 'center', width: '100%' }}>
         {mode === 'login' ? '¿No tienes cuenta? Crear una' : '¿Ya tienes cuenta? Entrar'}
       </button>
     </div>

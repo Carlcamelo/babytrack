@@ -187,6 +187,10 @@ export default function BabyTrack({ auth, data }) {
   const [msD, setMsD] = useState(null);
   const [slpA, setSlpA] = useState(null);
   const [slpE, setSlpE] = useState(0);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinErr, setJoinErr] = useState("");
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [showJoin, setShowJoin] = useState(false);
   const [invR, setInvR] = useState("cuidador");
   const [invN, setInvN] = useState("");
   const [invPerms, setInvPerms] = useState([...ROLE_DEFAULTS.cuidador]);
@@ -241,6 +245,9 @@ export default function BabyTrack({ auth, data }) {
   }, [nursingActive]);
 
   useEffect(() => { chatRef.current?.scrollIntoView({ behavior: "smooth" }); }, [aiMsgs, aiL]);
+
+  // Actualizar ob si data.baby llega después de unirse a una familia con código
+  useEffect(() => { if (data.baby && !ob) setOb(true); }, [data.baby]);
 
   // Helpers
   const hp = p => cu.perms?.includes(p) || cu.role === "admin";
@@ -537,7 +544,33 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
             <div key={i} style={{ background: T.card + "CC", backdropFilter: "blur(8px)", borderRadius: 16, padding: "14px 8px", textAlign: "center", border: `1px solid ${T.border}55` }}>
               <span style={{ fontSize: 24, display: "block", marginBottom: 2 }}>{f.e}</span><span style={{ fontSize: 11, fontWeight: 700 }}>{f.x}</span></div>)}
         </div>
-        <button onClick={() => setObS(1)} style={{ width: "100%", padding: 18, borderRadius: 22, background: `linear-gradient(135deg,${T.accent},#D4623C)`, color: "#fff", border: "none", cursor: "pointer", fontSize: 18, fontWeight: 800, boxShadow: "0 8px 32px rgba(227,111,71,0.4)", animation: "glow 3s ease infinite" }}>Comenzar →</button>
+        <button onClick={() => setObS(1)} style={{ width: "100%", padding: 18, borderRadius: 22, background: `linear-gradient(135deg,${T.accent},#D4623C)`, color: "#fff", border: "none", cursor: "pointer", fontSize: 18, fontWeight: 800, boxShadow: "0 8px 32px rgba(227,111,71,0.4)", animation: "glow 3s ease infinite", marginBottom: 12 }}>Comenzar →</button>
+
+        {/* Unirse a familia existente con código */}
+        {!showJoin ? (
+          <button onClick={() => setShowJoin(true)} style={{ width: "100%", padding: 14, borderRadius: 18, background: "transparent", border: `2px solid ${T.border}`, cursor: "pointer", fontSize: 14, fontWeight: 700, color: T.soft }}>
+            🎟 Unirme a una familia existente
+          </button>
+        ) : (
+          <div style={{ background: T.card + "CC", backdropFilter: "blur(8px)", borderRadius: 20, padding: 18, border: `1.5px solid ${T.accent}44`, animation: "fadeUp 0.3s ease" }}>
+            <p style={{ fontSize: 14, fontWeight: 800, marginBottom: 10, textAlign: "center" }}>👨‍👩‍👧 Código de invitación</p>
+            <input value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} placeholder="ABC123" maxLength={6}
+              style={{ width: "100%", padding: "16px", borderRadius: 16, border: `2px solid ${T.accent}`, fontSize: 26, outline: "none", fontWeight: 900, background: T.card, marginBottom: 10, textAlign: "center", letterSpacing: 10 }} />
+            {joinErr && <p style={{ fontSize: 12, color: "#EF4444", fontWeight: 700, textAlign: "center", marginBottom: 8 }}>{joinErr}</p>}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => { setShowJoin(false); setJoinCode(""); setJoinErr(""); }} style={{ flex: 1, padding: 13, borderRadius: 14, background: "transparent", border: `1.5px solid ${T.border}`, cursor: "pointer", fontSize: 14, fontWeight: 700, color: T.soft }}>Cancelar</button>
+              <button disabled={joinCode.length < 4 || joinLoading} onClick={async () => {
+                if (joinCode.length < 4) return;
+                setJoinLoading(true); setJoinErr("");
+                const result = await auth.joinFamily(joinCode);
+                if (result?.error) { setJoinErr(result.error === "Código no válido" ? "Código inválido o ya utilizado" : result.error); }
+                setJoinLoading(false);
+              }} style={{ flex: 2, padding: 13, borderRadius: 14, background: joinCode.length >= 4 ? `linear-gradient(135deg,${T.accent},#D4623C)` : T.border, color: "#fff", border: "none", cursor: joinCode.length >= 4 ? "pointer" : "default", fontSize: 15, fontWeight: 800 }}>
+                {joinLoading ? "..." : "Unirme →"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>}
 
       {obS === 1 && <div style={{ animation: "fadeUp 0.4s ease" }}>
