@@ -1060,7 +1060,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
 
         {inv.filter(i => i.status === "pending").length > 0 && <><SL>Pendientes</SL>{inv.filter(i => i.status === "pending").map(x => <div key={x.id} style={{ ...CS, marginBottom: 5, padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 18 }}>📩</span><div style={{ flex: 1 }}><p style={{ fontSize: 13, fontWeight: 700 }}>{x.name}</p><p style={{ fontSize: 10, color: T.soft }}>Código: <strong>{x.code}</strong></p></div>
-          <button onClick={() => acceptInv(x.id)} style={{ padding: "5px 8px", borderRadius: 8, background: T.ok, color: "#fff", border: "none", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>Simular ✓</button></div>)}</>}
+          </div>)}</>}
 
         <div style={{ ...CS, padding: 14, marginTop: 12 }}>
           <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>➕ Invitar familiar</p>
@@ -1102,9 +1102,6 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
           </>}
         </div>
 
-        <div style={{ ...CS, padding: 14, marginTop: 12 }}>
-          <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 6 }}>🔄 Simular vista</p>
-          <div style={{ display: "flex", gap: 5 }}>{ROLES.map(r => <button key={r.id} onClick={() => switchU(r.id, r.id === "admin" ? mem.find(m => m.role === "admin")?.name || "Admin" : "Demo")} style={{ flex: 1, padding: "8px 3px", borderRadius: 10, cursor: "pointer", background: cu.role === r.id ? T.accent : T.card, color: cu.role === r.id ? "#fff" : T.text, border: `1.5px solid ${cu.role === r.id ? T.accent : T.border}`, fontSize: 10, fontWeight: 700, textAlign: "center" }}>{r.e} {r.l}</button>)}</div></div>
       </div>}
 
       {/* EDIT PERMS */}
