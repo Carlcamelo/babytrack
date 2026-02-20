@@ -185,7 +185,7 @@ export default function BabyTrack({ auth, data }) {
   const [taskTab, setTaskTab] = useState("pending");
   const [quickM, setQuickM] = useState(false);
   const [msD, setMsD] = useState(null);
-  const [slpA, setSlpA] = useState(null);
+  const [slpA, setSlpA] = useState(() => { try { const v = localStorage.getItem('bt_slpA'); return v ? JSON.parse(v) : null; } catch { return null; } });
   const [slpE, setSlpE] = useState(0);
   const [joinCode, setJoinCode] = useState("");
   const [joinErr, setJoinErr] = useState("");
@@ -208,8 +208,8 @@ export default function BabyTrack({ auth, data }) {
   const [fOz, setFOz] = useState(4);
   const [fNo, setFNo] = useState("");
   const [fTs, setFTs] = useState("");
-  const [nursingActive, setNursingActive] = useState(null); // { breast: "left"|"right", startedAt: iso }
-  const [nursingSessions, setNursingSessions] = useState([]); // [{ breast, minutes }]
+  const [nursingActive, setNursingActive] = useState(() => { try { const v = localStorage.getItem('bt_nursingActive'); return v ? JSON.parse(v) : null; } catch { return null; } });
+  const [nursingSessions, setNursingSessions] = useState(() => { try { const v = localStorage.getItem('bt_nursingSessions'); return v ? JSON.parse(v) : []; } catch { return []; } });
   const [nursingElapsed, setNursingElapsed] = useState(0); // segundos
   const [dTy, setDTy] = useState("pee");
   const [pCo, setPCo] = useState("yellow");
@@ -244,6 +244,20 @@ export default function BabyTrack({ auth, data }) {
     const iv = setInterval(() => setNursingElapsed(Math.floor((Date.now() - new Date(nursingActive.startedAt)) / 1000)), 1000);
     return () => clearInterval(iv);
   }, [nursingActive]);
+
+  // Persist timers to localStorage so they survive page refresh / closing browser
+  useEffect(() => {
+    if (slpA) localStorage.setItem('bt_slpA', JSON.stringify(slpA));
+    else localStorage.removeItem('bt_slpA');
+  }, [slpA]);
+  useEffect(() => {
+    if (nursingActive) localStorage.setItem('bt_nursingActive', JSON.stringify(nursingActive));
+    else localStorage.removeItem('bt_nursingActive');
+  }, [nursingActive]);
+  useEffect(() => {
+    if (nursingSessions.length > 0) localStorage.setItem('bt_nursingSessions', JSON.stringify(nursingSessions));
+    else localStorage.removeItem('bt_nursingSessions');
+  }, [nursingSessions]);
 
   useEffect(() => { chatRef.current?.scrollIntoView({ behavior: "smooth" }); }, [aiMsgs, aiL]);
 
@@ -635,7 +649,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
       {cropModal}
 
       {/* HOME */}
-      {view === "home" && !sub && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.4s ease" }}>
+      {view === "home" && !sub && <div style={{ padding: "14px 16px 100px", animation: "fadeUp 0.4s ease" }}>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -737,6 +751,17 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
             <p style={{ fontSize: 11, fontWeight: 700, color: T.soft, marginTop: 3 }}>h sueño</p>
             <p style={{ fontSize: 10, color: T.soft }}>{goals.sleepLabel}</p>
           </div>
+        </div>
+
+        {/* Registrar */}
+        <p style={{ fontSize: 12, fontWeight: 800, color: T.soft, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.8 }}>Registrar</p>
+        <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+          {REC.filter(r => hp(r.p)).map(r => (
+            <button key={r.id} onClick={() => setSub(r.id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 4px", borderRadius: 18, background: r.c + (dark ? "22" : "20"), border: `1.5px solid ${r.c}${dark ? "33" : "44"}`, cursor: "pointer" }}>
+              <span style={{ fontSize: 26 }}>{r.e}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: T.text }}>{r.l}</span>
+            </button>
+          ))}
         </div>
 
         {/* Tareas de hoy */}
@@ -937,7 +962,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
         <button onClick={addGrowth} disabled={!wK && !hC} style={{ width: "100%", padding: 15, borderRadius: 20, background: (wK || hC) ? "linear-gradient(135deg,#34D399,#10B981)" : T.border, color: "#fff", border: "none", cursor: (wK || hC) ? "pointer" : "default", fontSize: 16, fontWeight: 800 }}>Guardar ✓</button></div>}
 
       {/* HISTORY */}
-      {view === "history" && !sub && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.3s ease" }}>
+      {view === "history" && !sub && <div style={{ padding: "14px 16px 100px", animation: "fadeUp 0.3s ease" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}><h2 style={{ fontSize: 19, fontWeight: 900 }}>📊 Historial</h2>
           {ent.length > 0 && hp("export_data") && <button onClick={exportCSV} style={{ padding: "5px 10px", borderRadius: 10, background: T.accent, color: "#fff", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>📥 CSV</button>}</div>
         {ent.length === 0 ? <div style={{ textAlign: "center", padding: "50px 20px", color: T.soft }}><p style={{ fontSize: 40 }}>📝</p><p style={{ fontWeight: 700, marginTop: 8 }}>Sin registros</p></div>
@@ -960,7 +985,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
               {hp("manage_family") && <button onClick={() => delE(e.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: T.soft, padding: 3 }}>✕</button>}</div>; })}</div>}
 
       {/* MILESTONES */}
-      {view === "milestones" && !msD && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.3s ease" }}>
+      {view === "milestones" && !msD && <div style={{ padding: "14px 16px 100px", animation: "fadeUp 0.3s ease" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}><Bk fn={() => setView("home")} /><div><h2 style={{ fontSize: 19, fontWeight: 900 }}>🌟 Hitos ({prof.ageRange})</h2><p style={{ fontSize: 11, color: T.soft }}>{msDone.length}/{milestones.length}</p></div></div>
         <div style={{ height: 7, borderRadius: 4, background: T.border, marginBottom: 16, overflow: "hidden" }}><div style={{ height: "100%", borderRadius: 4, width: `${milestones.length ? (msDone.filter(m => milestones.find(x => x.id === m.id)).length / milestones.length) * 100 : 0}%`, background: `linear-gradient(90deg,#FDE68A,${T.ok})`, transition: "width 0.5s" }} /></div>
         {milestones.map(m => { const dn = msDone.find(x => x.id === m.id); return (
@@ -969,7 +994,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
             <div style={{ flex: 1, cursor: "pointer" }} onClick={() => setMsD(m)}><p style={{ fontSize: 13, fontWeight: 700 }}>{m.e} {m.l}</p><p style={{ fontSize: 10, color: T.soft }}>~{m.m}m · info →</p></div>
             {dn && <p style={{ fontSize: 10, color: T.ok, fontWeight: 700 }}>{fD(dn.at)}</p>}</div>); })}</div>}
 
-      {msD && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.3s ease" }}>
+      {msD && <div style={{ padding: "14px 16px 100px", animation: "fadeUp 0.3s ease" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}><Bk fn={() => setMsD(null)} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>Detalle</h2></div>
         <div style={{ ...CS, padding: 20, textAlign: "center", marginBottom: 14 }}><span style={{ fontSize: 44 }}>{msD.e}</span><h3 style={{ fontSize: 18, fontWeight: 900, marginTop: 8 }}>{msD.l}</h3><p style={{ fontSize: 12, color: T.accent, fontWeight: 700 }}>~{msD.m} meses</p>
           {msDone.find(x => x.id === msD.id) && <p style={{ fontSize: 11, color: T.ok, fontWeight: 700, marginTop: 4 }}>✓ {fD(msDone.find(x => x.id === msD.id).at)}</p>}</div>
@@ -977,7 +1002,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
         <button onClick={() => { togMs(msD.id); setMsD(null); }} style={{ width: "100%", padding: 14, borderRadius: 18, background: msDone.find(x => x.id === msD.id) ? T.border : `linear-gradient(135deg,${T.ok},#059669)`, color: msDone.find(x => x.id === msD.id) ? T.text : "#fff", border: "none", cursor: "pointer", fontSize: 15, fontWeight: 800, marginTop: 14 }}>{msDone.find(x => x.id === msD.id) ? "Desmarcar" : "Alcanzado ✓"}</button></div>}
 
       {/* FAMILY */}
-      {view === "family" && !editM && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.3s ease" }}>
+      {view === "family" && !editM && <div style={{ padding: "14px 16px 100px", animation: "fadeUp 0.3s ease" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}><Bk fn={() => { setView("home"); setInvStep(0); }} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>👨‍👩‍👧 Familia</h2></div>
         <SL>Miembros</SL>
         {mem.map(m => <div key={m.id} style={{ ...CS, marginBottom: 5, padding: "11px 12px", display: "flex", alignItems: "center", gap: 9 }}>
@@ -1036,7 +1061,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
       </div>}
 
       {/* EDIT PERMS */}
-      {editM && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.3s ease" }}>
+      {editM && <div style={{ padding: "14px 16px 100px", animation: "fadeUp 0.3s ease" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}><Bk fn={() => setEditM(null)} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>Permisos: {editM.name}</h2></div>
         <p style={{ fontSize: 12, color: T.soft, marginBottom: 12 }}>Elige qué puede hacer en la app</p>
         {PERMS_LIST.map(p => { const on = editM.perms?.includes(p.id); return (
@@ -1046,7 +1071,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
         <button onClick={() => setEditM(null)} style={{ width: "100%", padding: 14, borderRadius: 18, background: T.accent, color: "#fff", border: "none", cursor: "pointer", fontSize: 15, fontWeight: 800, marginTop: 12 }}>Listo ✓</button></div>}
 
       {/* TASKS */}
-      {view === "tasks" && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.3s ease" }}>
+      {view === "tasks" && <div style={{ padding: "14px 16px 100px", animation: "fadeUp 0.3s ease" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}><Bk fn={() => setView("home")} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>📌 Tareas</h2></div>
 
         {!tF_show ? <button onClick={() => setTFShow(true)} style={{ width: "100%", padding: 12, borderRadius: 14, background: T.accent, color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, marginBottom: 12 }}>+ Nueva tarea</button>
@@ -1135,7 +1160,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
       </div>}
 
       {/* QUESTIONS */}
-      {view === "questions" && !sub && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.3s ease" }}>
+      {view === "questions" && !sub && <div style={{ padding: "14px 16px 100px", animation: "fadeUp 0.3s ease" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}><Bk fn={() => setView("home")} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>📋 Preguntas</h2></div>
         {hp("ask_questions") && <div style={{ display: "flex", gap: 6, marginBottom: 14 }}><input value={nq} onChange={e => setNq(e.target.value)} onKeyDown={e => e.key === "Enter" && addQ()} placeholder="Nueva pregunta..." style={{ flex: 1, padding: "11px 14px", borderRadius: 14, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, outline: "none" }} />
           <button onClick={addQ} style={{ width: 42, height: 42, borderRadius: 14, background: T.accent, border: "none", cursor: "pointer", color: "#fff", fontSize: 18 }}>+</button></div>}
@@ -1152,7 +1177,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
       </div>}
 
       {/* PROFILE */}
-      {view === "profile" && !sub && hp("manage_family") && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.3s ease" }}>
+      {view === "profile" && !sub && hp("manage_family") && <div style={{ padding: "14px 16px 100px", animation: "fadeUp 0.3s ease" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}><Bk fn={() => setView("home")} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>⚙️ Perfil</h2></div>
         <div style={{ ...CS, padding: 18, marginBottom: 10, textAlign: "center" }}>
           <div onClick={() => fileRef.current?.click()} style={{ cursor: "pointer", display: "inline-block", position: "relative", marginBottom: 8 }}><Av sz={64} />
@@ -1167,16 +1192,6 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
         {hp("export_data") && <div style={{ ...CS, padding: 14, marginBottom: 8 }}><SL>Exportar</SL><button onClick={exportCSV} style={{ width: "100%", padding: 11, borderRadius: 12, background: T.accent, color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>📥 CSV ({ent.length} registros)</button></div>}
         <div style={{ ...CS, padding: 14 }}><SL>Datos</SL><p style={{ fontSize: 12, color: T.soft, marginBottom: 6 }}>📊 {ent.length} registros · 📋 {qs.length} preguntas · 🌟 {msDone.length} hitos · 💬 {aiMsgs.length} IA · 👥 {mem.length} miembros</p>
           <button onClick={resetAll} style={{ width: "100%", padding: 10, borderRadius: 12, background: dark ? "#2D0F0F" : "#FEE2E2", color: "#EF4444", border: `1px solid ${dark ? "#441111" : "#FECACA"}`, cursor: "pointer", fontSize: 12, fontWeight: 700, marginTop: 6 }}>Borrar todo y reiniciar</button></div>
-      </div>}
-
-      {/* QUICK REGISTER BAR */}
-      {!sub && !msD && !editM && <div style={{ position: "fixed", bottom: 68, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: T.glass, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderTop: `1px solid ${T.border}`, display: "flex", justifyContent: "space-around", padding: "6px 4px 6px", zIndex: 99 }}>
-        {REC.filter(r => hp(r.p)).map(r => (
-          <button key={r.id} onClick={() => setSub(r.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, background: "none", border: "none", cursor: "pointer", padding: "4px 6px" }}>
-            <div style={{ width: 46, height: 46, borderRadius: 14, background: r.c + (dark ? "25" : "30"), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>{r.e}</div>
-            <span style={{ fontSize: 9, fontWeight: 700, color: T.soft, whiteSpace: "nowrap" }}>{r.l}</span>
-          </button>
-        ))}
       </div>}
 
       {/* NAV */}
