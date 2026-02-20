@@ -661,6 +661,20 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
           </div>
         </div>}
 
+        {/* Nursing timer banner */}
+        {nursingActive && <div onClick={() => setSub("feed")} style={{ background: "linear-gradient(135deg,#EC4899,#BE185D)", borderRadius: 20, padding: "14px 16px", marginBottom: 12, cursor: "pointer", animation: "pulse 2s ease infinite" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <p style={{ fontSize: 11, color: "#FCE7F3", fontWeight: 700 }}>
+                {nursingActive.breast === "left" ? "🫲 PECHO IZQUIERDO" : "🫱 PECHO DERECHO"} EN CURSO
+              </p>
+              <p style={{ fontSize: 28, fontWeight: 900, color: "#fff" }}>{fSec(nursingElapsed)}</p>
+              <p style={{ fontSize: 11, color: "#FCE7F3" }}>~{estimateNursingOz([...nursingSessions, { breast: nursingActive.breast, minutes: Math.max(1, Math.floor(nursingElapsed / 60)) }], prof.ageRange)} oz estimado</p>
+            </div>
+            <div style={{ padding: "10px 16px", borderRadius: 14, background: "rgba(255,255,255,0.2)", color: "#fff", fontWeight: 800, fontSize: 13 }}>Retomar</div>
+          </div>
+        </div>}
+
         {/* Critical alerts — always visible */}
         {criticalAlerts.map((a, i) => <div key={i} style={{ padding: "12px 14px", borderRadius: 16, marginBottom: 6, background: dark ? "rgba(30,10,10,0.85)" : "#FEF2F2", border: "1.5px solid #EF444433", display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 22 }}>🚨</span>
