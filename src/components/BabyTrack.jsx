@@ -191,6 +191,7 @@ export default function BabyTrack({ auth, data }) {
   const [joinErr, setJoinErr] = useState("");
   const [joinLoading, setJoinLoading] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
   const [invR, setInvR] = useState("cuidador");
   const [invN, setInvN] = useState("");
   const [invPerms, setInvPerms] = useState([...ROLE_DEFAULTS.cuidador]);
@@ -314,6 +315,9 @@ export default function BabyTrack({ auth, data }) {
   // Temp
   if (lT?.temp >= 38) alerts.push({ t: "danger", m: `🌡️ Temp: ${lT.temp}°C — fiebre` });
   if (overdueTasks.length > 0) alerts.push({ t: "warn", m: `📌 ${overdueTasks.length} tarea(s) vencida(s)` });
+
+  const criticalAlerts = alerts.filter(a => a.t === "danger");
+  const softAlerts = alerts.filter(a => a.t === "warn");
 
   // DAILY SCORE (0-100)
   const feedScore = Math.min(30, Math.round((tOz / goals.ozMin) * 30)); // 0-30
@@ -631,129 +635,120 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
       {cropModal}
 
       {/* HOME */}
-      {view === "home" && !sub && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.4s ease" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+      {view === "home" && !sub && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.4s ease" }}>
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div onClick={() => hp("manage_family") && fileRef.current?.click()} style={{ cursor: hp("manage_family") ? "pointer" : "default" }}><Av sz={42} /></div>
-            <div><p style={{ fontSize: 11, color: T.soft, fontWeight: 600 }}>{FAMILY_ROLES.find(r => r.id === cu.familyRole)?.e || ""} {FAMILY_ROLES.find(r => r.id === cu.familyRole)?.l || ""} · {cu.name}</p>
-              <h1 style={{ fontSize: 20, fontWeight: 900 }}>{prof.name || "Mi Bebé"}</h1>
-              {prof.birthDate && <p style={{ fontSize: 11, color: T.accent, fontWeight: 700 }}>{fmtAge(prof.birthDate)}</p>}</div></div>
+            <div onClick={() => hp("manage_family") && fileRef.current?.click()} style={{ cursor: hp("manage_family") ? "pointer" : "default" }}><Av sz={46} /></div>
+            <div>
+              <h1 style={{ fontSize: 22, fontWeight: 900 }}>{prof.name || "Mi Bebé"}</h1>
+              {prof.birthDate && <p style={{ fontSize: 13, color: T.accent, fontWeight: 700 }}>{fmtAge(prof.birthDate)}</p>}
+              <p style={{ fontSize: 11, color: T.soft }}>{FAMILY_ROLES.find(r => r.id === cu.familyRole)?.e} {cu.name}</p>
+            </div>
+          </div>
           <div style={{ display: "flex", gap: 5 }}>
-            <button onClick={() => setDark(!dark)} style={{ width: 36, height: 36, borderRadius: 12, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 15 }}>{dark ? "☀️" : "🌙"}</button>
-            {hp("manage_family") && <button onClick={() => setView("profile")} style={{ width: 36, height: 36, borderRadius: 12, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 15 }}>⚙️</button>}
-            {!hp("manage_family") && <button onClick={resetAll} style={{ width: 36, height: 36, borderRadius: 12, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 11, fontWeight: 700, color: T.soft }}>🔄</button>}
-          </div></div>
-
-        {slpA && <div onClick={() => setSub("sleep")} style={{ background: "linear-gradient(135deg,#7C3AED,#6D28D9)", borderRadius: 20, padding: "14px 16px", marginBottom: 10, cursor: "pointer", animation: "pulse 2s ease infinite" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><p style={{ fontSize: 11, color: "#E9D5FF", fontWeight: 700 }}>{slpA.type === "nap" ? "💤 SIESTA" : "🌙 NOCHE"} EN CURSO</p><p style={{ fontSize: 26, fontWeight: 900, color: "#fff" }}>{fSec(slpE)}</p></div>
-            <div style={{ padding: "8px 14px", borderRadius: 12, background: "rgba(255,255,255,0.2)", color: "#fff", fontWeight: 800, fontSize: 12 }}>Detener</div></div></div>}
-
-        {alerts.length > 0 && <div style={{ marginBottom: 10 }}>{alerts.map((a, i) => <div key={i} onClick={() => { if (a.m.includes("tarea")) setView("tasks"); }} style={{ padding: "10px 14px", borderRadius: 16, marginBottom: 5, background: dark ? "rgba(20,20,31,0.7)" : "rgba(255,255,255,0.7)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: `1px solid ${a.t === "danger" ? "#EF444433" : "#F59E0B33"}`, display: "flex", alignItems: "center", gap: 10, cursor: "pointer", animation: `slideIn 0.3s ease ${i * 0.08}s both`, boxShadow: a.t === "danger" ? "0 0 20px rgba(239,68,68,0.1)" : "none" }}>
-          <div style={{ width: 34, height: 34, borderRadius: 11, background: a.t === "danger" ? "#EF444418" : "#F59E0B18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0, boxShadow: a.t === "danger" ? "0 0 14px #EF444430" : "none" }}>{a.t === "danger" ? "🚨" : "⚠️"}</div>
-          <p style={{ fontSize: 12, fontWeight: 700, color: a.t === "danger" ? "#EF4444" : "#D97706", flex: 1 }}>{a.m}</p>
-          <span style={{ fontSize: 11, color: T.soft, opacity: 0.5 }}>›</span></div>)}</div>}
-
-        {/* DAILY SCORE */}
-        {hasData && <div style={{ background: dark ? "rgba(20,20,31,0.6)" : "rgba(255,255,255,0.65)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderRadius: 22, padding: "16px 18px", marginBottom: 10, border: `1.5px solid ${scoreColor}22`, display: "flex", alignItems: "center", gap: 16, boxShadow: `0 4px 24px ${scoreColor}12` }}>
-          <div style={{ position: "relative", width: 62, height: 62, flexShrink: 0 }}>
-            <svg width="62" height="62" viewBox="0 0 62 62">
-              <circle cx="31" cy="31" r="27" fill="none" stroke={T.border} strokeWidth="5" />
-              <circle cx="31" cy="31" r="27" fill="none" stroke={scoreColor} strokeWidth="5" strokeLinecap="round"
-                strokeDasharray={`${(dailyScore / 100) * 170} 170`} transform="rotate(-90 31 31)" style={{ transition: "stroke-dasharray 0.8s ease" }} />
-            </svg>
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
-              <span style={{ fontSize: 18, fontWeight: 900, color: scoreColor, lineHeight: 1 }}>{dailyScore}</span>
-              <span style={{ fontSize: 8, color: T.soft }}>/ 100</span></div></div>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
-              <span style={{ fontSize: 14 }}>{scoreEmoji}</span>
-              <p style={{ fontSize: 14, fontWeight: 800, color: scoreColor }}>{scoreLabel}</p></div>
-            <p style={{ fontSize: 11, color: T.soft, lineHeight: 1.4 }}>
-              🍼 {feedScore}/30 · 😴 {sleepScore}/30 · 🧷 {wetScore}/20 · 🌡️ {tempScore}/10
-            </p></div>
-        </div>}
-
-        <div style={{ background: dark ? "rgba(20,20,31,0.5)" : "rgba(255,255,255,0.55)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderRadius: 16, padding: "10px 14px", marginBottom: 10, border: `1px solid ${T.border}` }}>
-          <p style={{ fontSize: 10, fontWeight: 800, color: T.accent }}>💡 TIP DEL DÍA</p><p style={{ fontSize: 12, lineHeight: 1.4 }}>{tipDay}</p></div>
-
-        {/* ═══ BENTO GRID 2026 ═══ */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
-          {/* FEED CARD */}
-          <div onClick={() => setSub("feed")} style={{ background: dark ? "rgba(249,168,212,0.06)" : "rgba(249,168,212,0.1)", borderRadius: 20, padding: "16px 14px", border: `1px solid ${dark ? "#F9A8D415" : "#F9A8D425"}`, cursor: "pointer", transition: "transform 0.15s", position: "relative", overflow: "hidden" }}>
-            <div style={{ position: "absolute", top: -20, right: -20, width: 80, height: 80, borderRadius: "50%", background: "#F9A8D4" + (dark ? "08" : "0A"), pointerEvents: "none" }} />
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <span style={{ fontSize: 22 }}>🍼</span>
-              <span style={{ fontSize: 10, color: T.soft, fontWeight: 700, background: T.card, padding: "2px 8px", borderRadius: 8 }}>{goals.ozLabel}</span></div>
-            <p style={{ fontSize: 32, fontWeight: 900, color: feedStatus === "ok" ? T.ok : feedStatus === "warn" ? "#F59E0B" : T.text, lineHeight: 1, marginBottom: 2 }}>{tOz}<span style={{ fontSize: 14, fontWeight: 600, color: T.soft }}>oz</span></p>
-            <div style={{ height: 5, borderRadius: 3, background: T.border, marginTop: 10, overflow: "hidden" }}>
-              <div style={{ height: "100%", borderRadius: 3, width: `${feedPct}%`, background: feedStatus === "ok" ? T.ok : feedStatus === "warn" ? "#F59E0B" : "#EF4444", transition: "width 0.6s ease" }} /></div>
-            <p style={{ fontSize: 10, color: T.soft, marginTop: 6 }}>{tF.length} toma{tF.length !== 1 ? "s" : ""}{lF ? ` · ${rel(lF.ts)}` : ""}</p></div>
-
-          {/* SLEEP CARD */}
-          <div onClick={() => setSub("sleep")} style={{ background: dark ? "rgba(196,181,253,0.06)" : "rgba(196,181,253,0.1)", borderRadius: 20, padding: "16px 14px", border: `1px solid ${dark ? "#C4B5FD15" : "#C4B5FD25"}`, cursor: "pointer", position: "relative", overflow: "hidden" }}>
-            <div style={{ position: "absolute", top: -20, right: -20, width: 80, height: 80, borderRadius: "50%", background: "#C4B5FD" + (dark ? "08" : "0A"), pointerEvents: "none" }} />
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <span style={{ fontSize: 22 }}>😴</span>
-              <span style={{ fontSize: 10, color: T.soft, fontWeight: 700, background: T.card, padding: "2px 8px", borderRadius: 8 }}>{goals.sleepLabel}</span></div>
-            <p style={{ fontSize: 32, fontWeight: 900, color: sleepStatus === "ok" ? T.ok : sleepStatus === "warn" ? "#F59E0B" : T.text, lineHeight: 1, marginBottom: 2 }}>{tSlH}<span style={{ fontSize: 14, fontWeight: 600, color: T.soft }}>h</span></p>
-            <div style={{ height: 5, borderRadius: 3, background: T.border, marginTop: 10, overflow: "hidden" }}>
-              <div style={{ height: "100%", borderRadius: 3, width: `${sleepPct}%`, background: sleepStatus === "ok" ? T.ok : sleepStatus === "warn" ? "#F59E0B" : "#EF4444", transition: "width 0.6s ease" }} /></div>
-            <p style={{ fontSize: 10, color: T.soft, marginTop: 6 }}>{sleepTip}</p></div>
-
-          {/* DIAPERS WIDE CARD */}
-          <div onClick={() => setSub("diaper")} style={{ gridColumn: "span 2", background: dark ? "rgba(125,211,252,0.05)" : "rgba(125,211,252,0.08)", borderRadius: 20, padding: "14px 16px", border: `1px solid ${dark ? "#7DD3FC15" : "#7DD3FC20"}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                <span style={{ fontSize: 20 }}>🧷</span><span style={{ fontSize: 13, fontWeight: 800 }}>Pañales</span></div>
-              <div style={{ display: "flex", gap: 20 }}>
-                <div><p style={{ fontSize: 26, fontWeight: 900, color: wetStatus === "ok" ? T.ok : wetStatus === "warn" ? "#F59E0B" : T.text, lineHeight: 1 }}>{tWet} <span style={{ fontSize: 16 }}>💧</span></p>
-                  <p style={{ fontSize: 10, color: T.soft, marginTop: 2 }}>de {goals.wetLabel} mojados</p></div>
-                {tPoo > 0 && <div><p style={{ fontSize: 26, fontWeight: 900, lineHeight: 1 }}>{tPoo} <span style={{ fontSize: 16 }}>💩</span></p>
-                  <p style={{ fontSize: 10, color: T.soft, marginTop: 2 }}>{goals.pooFreq}</p></div>}
-              </div></div>
-            <div style={{ width: 54, height: 54, position: "relative", flexShrink: 0 }}>
-              <svg width="54" height="54" viewBox="0 0 54 54"><circle cx="27" cy="27" r="22" fill="none" stroke={T.border} strokeWidth="4" /><circle cx="27" cy="27" r="22" fill="none" stroke={wetStatus === "ok" ? T.ok : wetStatus === "warn" ? "#F59E0B" : "#EF4444"} strokeWidth="4" strokeLinecap="round" strokeDasharray={`${(wetPct / 100) * 138} 138`} transform="rotate(-90 27 27)" style={{ transition: "stroke-dasharray 0.6s ease" }} /></svg>
-              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: T.soft }}>{wetPct}%</div></div></div>
-
-          {/* LAST FEED + TEMP MINI CARDS */}
-          <div style={{ background: T.card, borderRadius: 16, padding: "12px 14px", border: `1px solid ${T.border}` }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: T.soft, marginBottom: 4 }}>⏱ Última toma</p>
-            <p style={{ fontSize: 16, fontWeight: 900 }}>{lF ? rel(lF.ts) : "—"}</p>
-            <p style={{ fontSize: 10, color: T.soft }}>
-              {lF ? `${lF.estimatedOz ? "~" : ""}${lF.oz}oz · ${fmt(lF.ts)}` : "Sin registros"}
-            </p>
-            {nextBreast && <p style={{ fontSize: 10, fontWeight: 800, color: "#F472B6", marginTop: 3 }}>
-              Próxima: {nextBreast === "left" ? "🫲 Izquierdo" : "🫱 Derecho"}
-            </p>}</div>
-          <div style={{ background: T.card, borderRadius: 16, padding: "12px 14px", border: `1px solid ${T.border}` }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: T.soft, marginBottom: 4 }}>🌡️ Temperatura</p>
-            <p style={{ fontSize: 16, fontWeight: 900, color: lT?.temp >= 38 ? "#EF4444" : lT?.temp >= 37.5 ? "#F59E0B" : T.text }}>{lT ? `${lT.temp}°C` : "—"}</p>
-            <p style={{ fontSize: 10, color: T.soft }}>{lT ? (lT.temp >= 38 ? "⚠️ Fiebre" : lT.temp >= 37.5 ? "Elevada" : "Normal") : "Sin registro"}</p></div>
+            <button onClick={() => setDark(!dark)} style={{ width: 38, height: 38, borderRadius: 13, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 16 }}>{dark ? "☀️" : "🌙"}</button>
+            {hp("manage_family") && <button onClick={() => setView("profile")} style={{ width: 38, height: 38, borderRadius: 13, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 16 }}>⚙️</button>}
+          </div>
         </div>
 
-        <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>Registrar</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 12 }}>
-          {REC.filter(r => hp(r.p)).map(r => <button key={r.id} onClick={() => setSub(r.id)} style={{ ...CS, padding: "14px 10px", cursor: "pointer", textAlign: "left", border: `1.5px solid ${r.c}${dark ? "22" : "33"}`, display: "flex", alignItems: "center", gap: 9 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 14, background: r.c + (dark ? "18" : "20"), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{r.e}</div>
-            <div><p style={{ fontSize: 13, fontWeight: 800 }}>{r.l}</p><p style={{ fontSize: 10, color: T.soft }}>{r.d}</p></div></button>)}</div>
+        {/* Sleep timer banner */}
+        {slpA && <div onClick={() => setSub("sleep")} style={{ background: "linear-gradient(135deg,#7C3AED,#6D28D9)", borderRadius: 20, padding: "14px 16px", marginBottom: 12, cursor: "pointer", animation: "pulse 2s ease infinite" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div><p style={{ fontSize: 11, color: "#E9D5FF", fontWeight: 700 }}>{slpA.type === "nap" ? "💤 SIESTA" : "🌙 NOCHE"} EN CURSO</p>
+              <p style={{ fontSize: 28, fontWeight: 900, color: "#fff" }}>{fSec(slpE)}</p></div>
+            <div style={{ padding: "10px 16px", borderRadius: 14, background: "rgba(255,255,255,0.2)", color: "#fff", fontWeight: 800, fontSize: 13 }}>Detener</div>
+          </div>
+        </div>}
 
-        <div style={{ display: "flex", gap: 7, marginBottom: 10 }}>
-          {hp("view_milestones") && <button onClick={() => setView("milestones")} style={{ ...CS, flex: 1, padding: "11px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 7 }}><span style={{ fontSize: 17 }}>🌟</span><div><p style={{ fontSize: 12, fontWeight: 800 }}>Hitos</p><p style={{ fontSize: 10, color: T.soft }}>{msDone.length}/{milestones.length}</p></div></button>}
-          {hp("manage_family") && <button onClick={() => setView("family")} style={{ ...CS, flex: 1, padding: "11px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 7 }}><span style={{ fontSize: 17 }}>👨‍👩‍👧</span><div><p style={{ fontSize: 12, fontWeight: 800 }}>Familia</p><p style={{ fontSize: 10, color: T.soft }}>{mem.length}</p></div></button>}
-          <button onClick={() => setView("tasks")} style={{ ...CS, flex: 1, padding: "11px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 7 }}><span style={{ fontSize: 17 }}>📌</span><div><p style={{ fontSize: 12, fontWeight: 800 }}>Tareas</p><p style={{ fontSize: 10, color: T.soft }}>{pendingTasks.length}</p></div></button></div>
+        {/* Critical alerts — always visible */}
+        {criticalAlerts.map((a, i) => <div key={i} style={{ padding: "12px 14px", borderRadius: 16, marginBottom: 6, background: dark ? "rgba(30,10,10,0.85)" : "#FEF2F2", border: "1.5px solid #EF444433", display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 22 }}>🚨</span>
+          <p style={{ fontSize: 14, fontWeight: 800, color: "#EF4444", flex: 1 }}>{a.m}</p>
+        </div>)}
 
-        {/* My Tasks Preview */}
-        {myTasks.length > 0 && <div style={{ ...CS, padding: "12px 14px", marginBottom: 10, cursor: "pointer" }} onClick={() => setView("tasks")}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <p style={{ fontSize: 12, fontWeight: 800 }}>📌 Mis tareas ({myTasks.length})</p><span style={{ fontSize: 10, color: T.accent, fontWeight: 700 }}>ver todo →</span></div>
-          {myTasks.slice(0, 3).map(t => { const cat = TASK_CATS.find(c => c.id === t.cat); return (
-            <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderTop: `1px solid ${T.border}` }}>
-              <span style={{ fontSize: 14 }}>{cat?.e || "📋"}</span>
-              <div style={{ flex: 1 }}><p style={{ fontSize: 12, fontWeight: 600 }}>{t.title}</p>
-                <p style={{ fontSize: 10, color: t.date && isPastDate(t.date) ? "#EF4444" : T.soft }}>{t.date ? fDShort(t.date) : "Sin fecha"}{t.time ? ` ${t.time}` : ""}{t.assignee ? ` · ${t.assignee}` : ""}</p></div></div>); })}</div>}
+        {/* Soft alerts — collapsible */}
+        {softAlerts.length > 0 && <div style={{ marginBottom: 12 }}>
+          <button onClick={() => setAlertsOpen(p => !p)} style={{ width: "100%", padding: "11px 14px", borderRadius: 14, background: dark ? "rgba(30,25,10,0.7)" : "#FFFBEB", border: "1px solid #F59E0B44", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, marginBottom: alertsOpen ? 6 : 0 }}>
+            <span style={{ fontSize: 16 }}>⚠️</span>
+            <p style={{ fontSize: 13, fontWeight: 800, color: "#D97706", flex: 1, textAlign: "left" }}>{softAlerts.length} aviso{softAlerts.length !== 1 ? "s" : ""}</p>
+            <span style={{ fontSize: 14, color: T.soft }}>{alertsOpen ? "▲" : "▼"}</span>
+          </button>
+          {alertsOpen && softAlerts.map((a, i) => <div key={i} onClick={() => { if (a.m.includes("tarea")) setView("tasks"); }} style={{ padding: "9px 14px", borderRadius: 12, marginBottom: 4, background: dark ? "rgba(20,20,31,0.5)" : "rgba(255,255,255,0.7)", border: "1px solid #F59E0B22", display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: "#D97706", flex: 1 }}>{a.m}</p>
+            <span style={{ fontSize: 11, color: T.soft }}>›</span>
+          </div>)}
+        </div>}
 
-        {qs.filter(q => q.status === "pending").length > 0 && hp("view_questions") && <button onClick={() => setView("questions")} style={{ width: "100%", padding: "10px 14px", borderRadius: 14, background: dark ? "#2A2511" : "#FEF9E7", border: `1px solid ${dark ? "#554411" : "#FDE68A"}`, cursor: "pointer", textAlign: "left" }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: "#D97706" }}>📋 {qs.filter(q => q.status === "pending").length} pregunta(s) pendiente(s)</p></button>}
+        {/* Última toma — main card */}
+        <div onClick={() => setSub("feed")} style={{ background: dark ? "rgba(249,168,212,0.08)" : "#FEF0EB", borderRadius: 24, padding: "18px 20px", marginBottom: 10, cursor: "pointer", border: `1.5px solid ${T.accent}22` }}>
+          <p style={{ fontSize: 11, fontWeight: 800, color: T.accent, marginBottom: 6 }}>🍼 ÚLTIMA TOMA</p>
+          {lF ? <>
+            <p style={{ fontSize: 42, fontWeight: 900, lineHeight: 1, marginBottom: 4 }}>{lF.estimatedOz ? "~" : ""}{lF.oz}<span style={{ fontSize: 18, fontWeight: 600, color: T.soft }}>oz</span></p>
+            <p style={{ fontSize: 14, color: T.soft, fontWeight: 600 }}>{rel(lF.ts)} · {fmt(lF.ts)}</p>
+            {nextBreast && <p style={{ fontSize: 13, fontWeight: 800, color: "#F472B6", marginTop: 6 }}>Próxima: {nextBreast === "left" ? "🫲 Izquierdo" : "🫱 Derecho"}</p>}
+          </> : <p style={{ fontSize: 18, fontWeight: 700, color: T.soft }}>Sin registros — toca para registrar</p>}
+        </div>
+
+        {/* Resumen del día */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 7, marginBottom: 10 }}>
+          <div style={{ background: T.card, borderRadius: 16, padding: "14px 10px", textAlign: "center", border: `1px solid ${T.border}` }}>
+            <p style={{ fontSize: 26, fontWeight: 900, color: feedStatus === "ok" ? T.ok : feedStatus === "warn" ? "#F59E0B" : T.text, lineHeight: 1 }}>{tOz}</p>
+            <p style={{ fontSize: 11, fontWeight: 700, color: T.soft, marginTop: 3 }}>oz hoy</p>
+            <p style={{ fontSize: 10, color: T.soft }}>{goals.ozLabel}</p>
+          </div>
+          <div style={{ background: T.card, borderRadius: 16, padding: "14px 10px", textAlign: "center", border: `1px solid ${T.border}` }}>
+            <p style={{ fontSize: 26, fontWeight: 900, color: wetStatus === "ok" ? T.ok : wetStatus === "warn" ? "#F59E0B" : T.text, lineHeight: 1 }}>{tWet}</p>
+            <p style={{ fontSize: 11, fontWeight: 700, color: T.soft, marginTop: 3 }}>💧 pipí</p>
+            <p style={{ fontSize: 10, color: T.soft }}>{goals.wetLabel}</p>
+          </div>
+          <div style={{ background: T.card, borderRadius: 16, padding: "14px 10px", textAlign: "center", border: `1px solid ${T.border}` }}>
+            <p style={{ fontSize: 26, fontWeight: 900, color: sleepStatus === "ok" ? T.ok : sleepStatus === "warn" ? "#F59E0B" : T.text, lineHeight: 1 }}>{tSlH}</p>
+            <p style={{ fontSize: 11, fontWeight: 700, color: T.soft, marginTop: 3 }}>h sueño</p>
+            <p style={{ fontSize: 10, color: T.soft }}>{goals.sleepLabel}</p>
+          </div>
+        </div>
+
+        {/* Tareas de hoy */}
+        {(todayTasks.length > 0 || overdueTasks.length > 0) && <div style={{ ...CS, padding: "14px 16px", marginBottom: 10, cursor: "pointer" }} onClick={() => setView("tasks")}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <p style={{ fontSize: 14, fontWeight: 800 }}>📌 Tareas de hoy</p>
+            <span style={{ fontSize: 12, color: T.accent, fontWeight: 700 }}>ver todas →</span>
+          </div>
+          {[...overdueTasks, ...todayTasks].slice(0, 3).map(t => { const cat = TASK_CATS.find(c => c.id === t.cat); return (
+            <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderTop: `1px solid ${T.border}` }}>
+              <span style={{ fontSize: 18 }}>{cat?.e || "📋"}</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 13, fontWeight: 700 }}>{t.title}</p>
+                <p style={{ fontSize: 11, color: t.date && isPastDate(t.date) ? "#EF4444" : T.soft }}>{t.date ? fDShort(t.date) : "Sin fecha"}{t.time ? ` ${t.time}` : ""}</p>
+              </div>
+            </div>
+          );})}
+        </div>}
+
+        {/* Grid de navegación */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 10 }}>
+          {hp("view_milestones") && <button onClick={() => setView("milestones")} style={{ ...CS, padding: "14px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+            <span style={{ fontSize: 24 }}>🌟</span>
+            <div><p style={{ fontSize: 14, fontWeight: 800 }}>Hitos</p><p style={{ fontSize: 11, color: T.soft }}>{msDone.length}/{milestones.length}</p></div>
+          </button>}
+          {hp("manage_family") && <button onClick={() => setView("family")} style={{ ...CS, padding: "14px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+            <span style={{ fontSize: 24 }}>👨‍👩‍👧</span>
+            <div><p style={{ fontSize: 14, fontWeight: 800 }}>Familia</p><p style={{ fontSize: 11, color: T.soft }}>{mem.length} miembro{mem.length !== 1 ? "s" : ""}</p></div>
+          </button>}
+          <button onClick={() => setView("tasks")} style={{ ...CS, padding: "14px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+            <span style={{ fontSize: 24 }}>📌</span>
+            <div><p style={{ fontSize: 14, fontWeight: 800 }}>Tareas</p><p style={{ fontSize: 11, color: T.soft }}>{pendingTasks.length} pendiente{pendingTasks.length !== 1 ? "s" : ""}</p></div>
+          </button>
+          {hp("use_ai") && <button onClick={() => setView("ai")} style={{ ...CS, padding: "14px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+            <span style={{ fontSize: 24 }}>🤖</span>
+            <div><p style={{ fontSize: 14, fontWeight: 800 }}>IA</p><p style={{ fontSize: 11, color: T.soft }}>Asistente</p></div>
+          </button>}
+        </div>
+
+        {qs.filter(q => q.status === "pending").length > 0 && hp("view_questions") && <button onClick={() => setView("questions")} style={{ width: "100%", padding: "12px 14px", borderRadius: 14, background: dark ? "#2A2511" : "#FEF9E7", border: `1px solid ${dark ? "#554411" : "#FDE68A"}`, cursor: "pointer", textAlign: "left" }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: "#D97706" }}>📋 {qs.filter(q => q.status === "pending").length} pregunta(s) para el pediatra</p>
+        </button>}
       </div>}
 
       {/* FEED */}
@@ -912,7 +907,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
         <button onClick={addGrowth} disabled={!wK && !hC} style={{ width: "100%", padding: 15, borderRadius: 20, background: (wK || hC) ? "linear-gradient(135deg,#34D399,#10B981)" : T.border, color: "#fff", border: "none", cursor: (wK || hC) ? "pointer" : "default", fontSize: 16, fontWeight: 800 }}>Guardar ✓</button></div>}
 
       {/* HISTORY */}
-      {view === "history" && !sub && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.3s ease" }}>
+      {view === "history" && !sub && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.3s ease" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}><h2 style={{ fontSize: 19, fontWeight: 900 }}>📊 Historial</h2>
           {ent.length > 0 && hp("export_data") && <button onClick={exportCSV} style={{ padding: "5px 10px", borderRadius: 10, background: T.accent, color: "#fff", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>📥 CSV</button>}</div>
         {ent.length === 0 ? <div style={{ textAlign: "center", padding: "50px 20px", color: T.soft }}><p style={{ fontSize: 40 }}>📝</p><p style={{ fontWeight: 700, marginTop: 8 }}>Sin registros</p></div>
@@ -935,7 +930,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
               {hp("manage_family") && <button onClick={() => delE(e.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: T.soft, padding: 3 }}>✕</button>}</div>; })}</div>}
 
       {/* MILESTONES */}
-      {view === "milestones" && !msD && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.3s ease" }}>
+      {view === "milestones" && !msD && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.3s ease" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}><Bk fn={() => setView("home")} /><div><h2 style={{ fontSize: 19, fontWeight: 900 }}>🌟 Hitos ({prof.ageRange})</h2><p style={{ fontSize: 11, color: T.soft }}>{msDone.length}/{milestones.length}</p></div></div>
         <div style={{ height: 7, borderRadius: 4, background: T.border, marginBottom: 16, overflow: "hidden" }}><div style={{ height: "100%", borderRadius: 4, width: `${milestones.length ? (msDone.filter(m => milestones.find(x => x.id === m.id)).length / milestones.length) * 100 : 0}%`, background: `linear-gradient(90deg,#FDE68A,${T.ok})`, transition: "width 0.5s" }} /></div>
         {milestones.map(m => { const dn = msDone.find(x => x.id === m.id); return (
@@ -944,7 +939,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
             <div style={{ flex: 1, cursor: "pointer" }} onClick={() => setMsD(m)}><p style={{ fontSize: 13, fontWeight: 700 }}>{m.e} {m.l}</p><p style={{ fontSize: 10, color: T.soft }}>~{m.m}m · info →</p></div>
             {dn && <p style={{ fontSize: 10, color: T.ok, fontWeight: 700 }}>{fD(dn.at)}</p>}</div>); })}</div>}
 
-      {msD && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.3s ease" }}>
+      {msD && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.3s ease" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}><Bk fn={() => setMsD(null)} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>Detalle</h2></div>
         <div style={{ ...CS, padding: 20, textAlign: "center", marginBottom: 14 }}><span style={{ fontSize: 44 }}>{msD.e}</span><h3 style={{ fontSize: 18, fontWeight: 900, marginTop: 8 }}>{msD.l}</h3><p style={{ fontSize: 12, color: T.accent, fontWeight: 700 }}>~{msD.m} meses</p>
           {msDone.find(x => x.id === msD.id) && <p style={{ fontSize: 11, color: T.ok, fontWeight: 700, marginTop: 4 }}>✓ {fD(msDone.find(x => x.id === msD.id).at)}</p>}</div>
@@ -952,7 +947,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
         <button onClick={() => { togMs(msD.id); setMsD(null); }} style={{ width: "100%", padding: 14, borderRadius: 18, background: msDone.find(x => x.id === msD.id) ? T.border : `linear-gradient(135deg,${T.ok},#059669)`, color: msDone.find(x => x.id === msD.id) ? T.text : "#fff", border: "none", cursor: "pointer", fontSize: 15, fontWeight: 800, marginTop: 14 }}>{msDone.find(x => x.id === msD.id) ? "Desmarcar" : "Alcanzado ✓"}</button></div>}
 
       {/* FAMILY */}
-      {view === "family" && !editM && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.3s ease" }}>
+      {view === "family" && !editM && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.3s ease" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}><Bk fn={() => { setView("home"); setInvStep(0); }} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>👨‍👩‍👧 Familia</h2></div>
         <SL>Miembros</SL>
         {mem.map(m => <div key={m.id} style={{ ...CS, marginBottom: 5, padding: "11px 12px", display: "flex", alignItems: "center", gap: 9 }}>
@@ -1011,7 +1006,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
       </div>}
 
       {/* EDIT PERMS */}
-      {editM && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.3s ease" }}>
+      {editM && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.3s ease" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}><Bk fn={() => setEditM(null)} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>Permisos: {editM.name}</h2></div>
         <p style={{ fontSize: 12, color: T.soft, marginBottom: 12 }}>Elige qué puede hacer en la app</p>
         {PERMS_LIST.map(p => { const on = editM.perms?.includes(p.id); return (
@@ -1021,7 +1016,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
         <button onClick={() => setEditM(null)} style={{ width: "100%", padding: 14, borderRadius: 18, background: T.accent, color: "#fff", border: "none", cursor: "pointer", fontSize: 15, fontWeight: 800, marginTop: 12 }}>Listo ✓</button></div>}
 
       {/* TASKS */}
-      {view === "tasks" && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.3s ease" }}>
+      {view === "tasks" && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.3s ease" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}><Bk fn={() => setView("home")} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>📌 Tareas</h2></div>
 
         {!tF_show ? <button onClick={() => setTFShow(true)} style={{ width: "100%", padding: 12, borderRadius: 14, background: T.accent, color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, marginBottom: 12 }}>+ Nueva tarea</button>
@@ -1110,7 +1105,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
       </div>}
 
       {/* QUESTIONS */}
-      {view === "questions" && !sub && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.3s ease" }}>
+      {view === "questions" && !sub && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.3s ease" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}><Bk fn={() => setView("home")} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>📋 Preguntas</h2></div>
         {hp("ask_questions") && <div style={{ display: "flex", gap: 6, marginBottom: 14 }}><input value={nq} onChange={e => setNq(e.target.value)} onKeyDown={e => e.key === "Enter" && addQ()} placeholder="Nueva pregunta..." style={{ flex: 1, padding: "11px 14px", borderRadius: 14, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, outline: "none" }} />
           <button onClick={addQ} style={{ width: 42, height: 42, borderRadius: 14, background: T.accent, border: "none", cursor: "pointer", color: "#fff", fontSize: 18 }}>+</button></div>}
@@ -1127,7 +1122,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
       </div>}
 
       {/* PROFILE */}
-      {view === "profile" && !sub && hp("manage_family") && <div style={{ padding: "14px 16px 108px", animation: "fadeUp 0.3s ease" }}>
+      {view === "profile" && !sub && hp("manage_family") && <div style={{ padding: "14px 16px 160px", animation: "fadeUp 0.3s ease" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}><Bk fn={() => setView("home")} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>⚙️ Perfil</h2></div>
         <div style={{ ...CS, padding: 18, marginBottom: 10, textAlign: "center" }}>
           <div onClick={() => fileRef.current?.click()} style={{ cursor: "pointer", display: "inline-block", position: "relative", marginBottom: 8 }}><Av sz={64} />
@@ -1142,6 +1137,16 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
         {hp("export_data") && <div style={{ ...CS, padding: 14, marginBottom: 8 }}><SL>Exportar</SL><button onClick={exportCSV} style={{ width: "100%", padding: 11, borderRadius: 12, background: T.accent, color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>📥 CSV ({ent.length} registros)</button></div>}
         <div style={{ ...CS, padding: 14 }}><SL>Datos</SL><p style={{ fontSize: 12, color: T.soft, marginBottom: 6 }}>📊 {ent.length} registros · 📋 {qs.length} preguntas · 🌟 {msDone.length} hitos · 💬 {aiMsgs.length} IA · 👥 {mem.length} miembros</p>
           <button onClick={resetAll} style={{ width: "100%", padding: 10, borderRadius: 12, background: dark ? "#2D0F0F" : "#FEE2E2", color: "#EF4444", border: `1px solid ${dark ? "#441111" : "#FECACA"}`, cursor: "pointer", fontSize: 12, fontWeight: 700, marginTop: 6 }}>Borrar todo y reiniciar</button></div>
+      </div>}
+
+      {/* QUICK REGISTER BAR */}
+      {!sub && !msD && !editM && <div style={{ position: "fixed", bottom: 68, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: T.glass, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderTop: `1px solid ${T.border}`, display: "flex", justifyContent: "space-around", padding: "6px 4px 6px", zIndex: 99 }}>
+        {REC.filter(r => hp(r.p)).map(r => (
+          <button key={r.id} onClick={() => setSub(r.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, background: "none", border: "none", cursor: "pointer", padding: "4px 6px" }}>
+            <div style={{ width: 46, height: 46, borderRadius: 14, background: r.c + (dark ? "25" : "30"), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>{r.e}</div>
+            <span style={{ fontSize: 9, fontWeight: 700, color: T.soft, whiteSpace: "nowrap" }}>{r.l}</span>
+          </button>
+        ))}
       </div>}
 
       {/* NAV */}
