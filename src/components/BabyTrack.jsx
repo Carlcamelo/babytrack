@@ -1204,18 +1204,29 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
       </div>}
 
       {/* NAV */}
-      {!sub && !msD && !editM && <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: dark ? "rgba(18,12,8,0.82)" : "rgba(255,255,255,0.72)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", borderTop: dark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(255,255,255,0.9)", boxShadow: dark ? "0 -8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.07)" : "0 -8px 32px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.95)", borderRadius: "22px 22px 0 0", display: "flex", justifyContent: "space-around", padding: "4px 3px 14px", zIndex: 100 }}>
-        {[
-          { id: "home", i: "🏠", l: "Inicio", show: true },
-          { id: "history", i: "📊", l: "Historial", show: hp("view_history") },
-          { id: "ai", i: "🤖", l: "IA", show: hp("use_ai") },
-          { id: "tasks", i: "📌", l: "Tareas", b: pendingTasks.length, show: true },
-          { id: "questions", i: "📋", l: "Preguntas", b: qs.filter(q => q.status === "pending").length, show: hp("view_questions") || hp("ask_questions") },
-        ].filter(x => x.show).map(x =>
-          <button key={x.id} onClick={() => { setView(x.id); setSub(null); }} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 1, padding: "4px 12px", position: "relative" }}>
-            {x.b > 0 && <div style={{ position: "absolute", top: -2, right: 4, minWidth: 14, height: 14, borderRadius: 7, background: T.accent, color: "#fff", fontSize: 8, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>{x.b}</div>}
-            <span style={{ fontSize: 20 }}>{x.i}</span><span style={{ fontSize: 10, fontWeight: view === x.id ? 800 : 600, color: view === x.id ? T.accent : T.soft }}>{x.l}</span>
-            {view === x.id && <div style={{ width: 16, height: 2.5, borderRadius: 2, background: T.accent }} />}</button>)}</div>}
+      {!sub && !msD && !editM && (() => {
+        const NAV = [
+          { id: "home",      i: "🏠", b: 0,                                                              show: true },
+          { id: "history",   i: "📊", b: 0,                                                              show: hp("view_history") },
+          { id: "ai",        i: "🤖", b: 0,                                                              show: hp("use_ai") },
+          { id: "tasks",     i: "📌", b: pendingTasks.length,                                            show: true },
+          { id: "questions", i: "📋", b: qs.filter(q => q.status === "pending").length,                 show: hp("view_questions") || hp("ask_questions") },
+        ].filter(x => x.show);
+        const activeI = NAV.findIndex(x => x.id === view);
+        const n = NAV.length;
+        return (
+          <div style={{ position: "fixed", bottom: 16, left: "50%", transform: "translateX(-50%)", width: "calc(100% - 32px)", maxWidth: 398, backdropFilter: "blur(30px)", WebkitBackdropFilter: "blur(30px)", background: dark ? "rgba(15,10,6,0.78)" : "rgba(255,255,255,0.58)", border: dark ? "1px solid rgba(255,255,255,0.10)" : "1px solid rgba(255,255,255,0.88)", boxShadow: dark ? "0 8px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07)" : "0 8px 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.95)", borderRadius: 30, display: "flex", alignItems: "center", padding: "6px 4px", zIndex: 100 }}>
+            {/* pill indicator */}
+            {activeI >= 0 && <div style={{ position: "absolute", width: `calc(${100 / n}% - 8px)`, height: 50, borderRadius: 22, background: dark ? "rgba(227,111,71,0.22)" : "rgba(227,111,71,0.14)", border: dark ? "1px solid rgba(227,111,71,0.32)" : "1px solid rgba(227,111,71,0.24)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", boxShadow: dark ? "inset 0 1px 0 rgba(255,255,255,0.08)" : "inset 0 1px 0 rgba(255,255,255,0.9)", left: `calc(${(activeI / n) * 100}% + 4px)`, top: "50%", transform: "translateY(-50%)", transition: "left 0.35s cubic-bezier(0.34,1.56,0.64,1)", pointerEvents: "none" }} />}
+            {NAV.map(x => (
+              <button key={x.id} onClick={() => { setView(x.id); setSub(null); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "11px 4px", position: "relative", zIndex: 1 }}>
+                {x.b > 0 && <div style={{ position: "absolute", top: 6, right: "calc(50% - 18px)", minWidth: 15, height: 15, borderRadius: 8, background: T.accent, color: "#fff", fontSize: 8, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>{x.b}</div>}
+                <span style={{ fontSize: 26, display: "block", transition: "transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s", transform: view === x.id ? "scale(1.2)" : "scale(0.95)", opacity: view === x.id ? 1 : 0.42 }}>{x.i}</span>
+              </button>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }
