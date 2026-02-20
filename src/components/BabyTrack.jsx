@@ -662,16 +662,32 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
         </div>}
 
         {/* Nursing timer banner */}
-        {nursingActive && <div onClick={() => setSub("feed")} style={{ background: "linear-gradient(135deg,#EC4899,#BE185D)", borderRadius: 20, padding: "14px 16px", marginBottom: 12, cursor: "pointer", animation: "pulse 2s ease infinite" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {nursingActive && <div style={{ background: "linear-gradient(135deg,#EC4899,#BE185D)", borderRadius: 20, padding: "14px 16px", marginBottom: 12, animation: "pulse 2s ease infinite" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
             <div>
-              <p style={{ fontSize: 11, color: "#FCE7F3", fontWeight: 700 }}>
-                {nursingActive.breast === "left" ? "🫲 PECHO IZQUIERDO" : "🫱 PECHO DERECHO"} EN CURSO
-              </p>
-              <p style={{ fontSize: 28, fontWeight: 900, color: "#fff" }}>{fSec(nursingElapsed)}</p>
-              <p style={{ fontSize: 11, color: "#FCE7F3" }}>~{estimateNursingOz([...nursingSessions, { breast: nursingActive.breast, minutes: Math.max(1, Math.floor(nursingElapsed / 60)) }], prof.ageRange)} oz estimado</p>
+              <p style={{ fontSize: 11, color: "#FCE7F3", fontWeight: 700 }}>{nursingActive.breast === "left" ? "🫲 IZQUIERDO" : "🫱 DERECHO"} EN CURSO</p>
+              <p style={{ fontSize: 30, fontWeight: 900, color: "#fff", lineHeight: 1 }}>{fSec(nursingElapsed)}</p>
+              <p style={{ fontSize: 12, color: "#FCE7F3", marginTop: 2 }}>~{estimateNursingOz([...nursingSessions, { breast: nursingActive.breast, minutes: Math.max(1, Math.floor(nursingElapsed / 60)) }], prof.ageRange)} oz estimado</p>
             </div>
-            <div style={{ padding: "10px 16px", borderRadius: 14, background: "rgba(255,255,255,0.2)", color: "#fff", fontWeight: 800, fontSize: 13 }}>Retomar</div>
+            <button onClick={() => setSub("feed")} style={{ padding: "6px 12px", borderRadius: 10, background: "rgba(255,255,255,0.2)", color: "#fff", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>Ver detalle →</button>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => startNursingBreast(nursingActive.breast === "left" ? "right" : "left")} style={{ flex: 1, padding: "11px 8px", borderRadius: 14, background: "rgba(255,255,255,0.2)", color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
+              Cambiar a {nursingActive.breast === "left" ? "🫱 Derecho" : "🫲 Izquierdo"}
+            </button>
+            <button onClick={() => {
+              const minutes = Math.max(1, Math.floor(nursingElapsed / 60));
+              const finalSessions = [...nursingSessions, { breast: nursingActive.breast, minutes }];
+              const estimatedOz = estimateNursingOz(finalSessions, prof.ageRange);
+              const lastBreast = nursingActive.breast;
+              const entryData = { feedType: "nursing", subtype: "nursing", sessions: finalSessions, estimatedOz, lastBreast, oz: estimatedOz };
+              setEnt(p => [...p, { id: Date.now(), type: "feed", ...entryData, notes: "", by: cu.name, ts: new Date().toISOString() }]);
+              data.addEntry({ type: "feed", data: entryData, by: cu.name, ts: new Date().toISOString() });
+              resetNursingState(); setFOz(4); setFNo(""); setFTs("");
+              flash("Toma ✓");
+            }} style={{ flex: 1, padding: "11px 8px", borderRadius: 14, background: "rgba(255,255,255,0.92)", color: "#BE185D", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 800 }}>
+              ⏹ Guardar
+            </button>
           </div>
         </div>}
 
@@ -767,7 +783,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
 
       {/* FEED */}
       {sub === "feed" && <div style={{ padding: "14px 16px 40px", animation: "fadeUp 0.3s ease", background: dark ? "linear-gradient(180deg,#1A1015 0%,#0C0C12 100%)" : "linear-gradient(180deg,#FEF0EB 0%,#FAFAF7 30%)", minHeight: "100vh" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}><Bk fn={() => { resetNursingState(); setSub(null); }} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>🍼 Alimentación</h2></div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}><Bk fn={() => setSub(null)} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>🍼 Alimentación</h2></div>
 
         {/* Tipo de toma */}
         <SL>Tipo de toma</SL>
