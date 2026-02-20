@@ -490,6 +490,14 @@ Conciso(máx 150 palabras). Si preocupa→pediatra. Medidas en oz.`;
     : { bg: "#FAFAF7", card: "#FFFFFF", text: "#1C1917", soft: "#78716C", accent: "#E36F47", accentL: "#FEF0EB", border: "#EDEBE6", ok: "#10B981", glass: "rgba(255,255,255,0.88)" };
   const CS = { background: T.card, borderRadius: 20, padding: 16, border: `1px solid ${T.border}` };
 
+  // ── LIQUID GLASS helpers ──
+  const glShadow = dark
+    ? "0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.07)"
+    : "0 8px 32px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.92)";
+  const glBorder = dark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(255,255,255,0.8)";
+  const glBlur = { backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" };
+  const GL = (bg, radius = 20) => ({ ...glBlur, background: bg, border: glBorder, boxShadow: glShadow, borderRadius: radius });
+
   const Av = ({ sz = 40 }) => photo
     ? <div style={{ width: sz, height: sz, borderRadius: sz * 0.35, overflow: "hidden", flexShrink: 0 }}><img src={photo} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /></div>
     : <div style={{ width: sz, height: sz, borderRadius: sz * 0.35, background: T.accentL, display: "flex", alignItems: "center", justifyContent: "center", fontSize: sz * 0.5, flexShrink: 0 }}>{prof.gender === "female" ? "👧" : "👦"}</div>;
@@ -638,7 +646,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
   const SL = ({ children }) => <p style={{ fontSize: 11, fontWeight: 800, color: T.soft, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.8 }}>{children}</p>;
 
   return (
-    <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: T.bg, fontFamily: "'Nunito',system-ui", color: T.text, position: "relative", transition: "background 0.3s" }}>
+    <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: dark ? T.bg : "linear-gradient(-45deg,#FEF0EB,#DBEAFE,#FDE8F0,#E0E7FF)", backgroundSize: dark ? undefined : "400% 400%", animation: dark ? undefined : "gradMove 14s ease infinite", fontFamily: "'Nunito',system-ui", color: T.text, position: "relative", transition: "background 0.3s" }}>
       <style>{css}</style>
       <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
 
@@ -650,6 +658,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
 
       {/* HOME */}
       {view === "home" && !sub && <div style={{ padding: "14px 16px 100px", animation: "fadeUp 0.4s ease" }}>
+
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -661,32 +670,32 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
             </div>
           </div>
           <div style={{ display: "flex", gap: 5 }}>
-            <button onClick={() => setDark(!dark)} style={{ width: 38, height: 38, borderRadius: 13, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 16 }}>{dark ? "☀️" : "🌙"}</button>
-            {hp("manage_family") && <button onClick={() => setView("profile")} style={{ width: 38, height: 38, borderRadius: 13, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 16 }}>⚙️</button>}
+            <button onClick={() => setDark(!dark)} style={{ ...GL(dark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.65)", 13), width: 38, height: 38, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16 }}>{dark ? "☀️" : "🌙"}</button>
+            {hp("manage_family") && <button onClick={() => setView("profile")} style={{ ...GL(dark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.65)", 13), width: 38, height: 38, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16 }}>⚙️</button>}
           </div>
         </div>
 
-        {/* Sleep timer banner */}
-        {slpA && <div onClick={() => setSub("sleep")} style={{ background: "linear-gradient(135deg,#7C3AED,#6D28D9)", borderRadius: 20, padding: "14px 16px", marginBottom: 12, cursor: "pointer", animation: "pulse 2s ease infinite" }}>
+        {/* Sleep timer banner — glass overlay */}
+        {slpA && <div onClick={() => setSub("sleep")} style={{ background: "linear-gradient(135deg,rgba(124,58,237,0.92),rgba(109,40,217,0.92))", ...glBlur, borderRadius: 22, padding: "14px 16px", marginBottom: 12, cursor: "pointer", animation: "pulse 2s ease infinite", border: "1px solid rgba(196,181,253,0.35)", boxShadow: "0 8px 32px rgba(124,58,237,0.35), inset 0 1px 0 rgba(255,255,255,0.2)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div><p style={{ fontSize: 11, color: "#E9D5FF", fontWeight: 700 }}>{slpA.type === "nap" ? "💤 SIESTA" : "🌙 NOCHE"} EN CURSO</p>
               <p style={{ fontSize: 28, fontWeight: 900, color: "#fff" }}>{fSec(slpE)}</p></div>
-            <div style={{ padding: "10px 16px", borderRadius: 14, background: "rgba(255,255,255,0.2)", color: "#fff", fontWeight: 800, fontSize: 13 }}>Detener</div>
+            <div style={{ padding: "10px 16px", borderRadius: 14, background: "rgba(255,255,255,0.18)", color: "#fff", fontWeight: 800, fontSize: 13, border: "1px solid rgba(255,255,255,0.25)" }}>Detener</div>
           </div>
         </div>}
 
-        {/* Nursing timer banner */}
-        {nursingActive && <div style={{ background: "linear-gradient(135deg,#EC4899,#BE185D)", borderRadius: 20, padding: "14px 16px", marginBottom: 12, animation: "pulse 2s ease infinite" }}>
+        {/* Nursing timer banner — glass overlay */}
+        {nursingActive && <div style={{ background: "linear-gradient(135deg,rgba(236,72,153,0.92),rgba(190,24,93,0.92))", ...glBlur, borderRadius: 22, padding: "14px 16px", marginBottom: 12, animation: "pulse 2s ease infinite", border: "1px solid rgba(252,207,232,0.35)", boxShadow: "0 8px 32px rgba(236,72,153,0.35), inset 0 1px 0 rgba(255,255,255,0.2)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
             <div>
               <p style={{ fontSize: 11, color: "#FCE7F3", fontWeight: 700 }}>{nursingActive.breast === "left" ? "🫲 IZQUIERDO" : "🫱 DERECHO"} EN CURSO</p>
               <p style={{ fontSize: 30, fontWeight: 900, color: "#fff", lineHeight: 1 }}>{fSec(nursingElapsed)}</p>
               <p style={{ fontSize: 12, color: "#FCE7F3", marginTop: 2 }}>~{estimateNursingOz([...nursingSessions, { breast: nursingActive.breast, minutes: Math.max(1, Math.floor(nursingElapsed / 60)) }], prof.ageRange)} oz estimado</p>
             </div>
-            <button onClick={() => setSub("feed")} style={{ padding: "6px 12px", borderRadius: 10, background: "rgba(255,255,255,0.2)", color: "#fff", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>Ver detalle →</button>
+            <button onClick={() => setSub("feed")} style={{ padding: "6px 12px", borderRadius: 10, background: "rgba(255,255,255,0.18)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>Ver detalle →</button>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => startNursingBreast(nursingActive.breast === "left" ? "right" : "left")} style={{ flex: 1, padding: "11px 8px", borderRadius: 14, background: "rgba(255,255,255,0.2)", color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
+            <button onClick={() => startNursingBreast(nursingActive.breast === "left" ? "right" : "left")} style={{ flex: 1, padding: "11px 8px", borderRadius: 14, background: "rgba(255,255,255,0.18)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
               Cambiar a {nursingActive.breast === "left" ? "🫱 Derecho" : "🫲 Izquierdo"}
             </button>
             <button onClick={() => {
@@ -705,28 +714,28 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
           </div>
         </div>}
 
-        {/* Critical alerts — always visible */}
-        {criticalAlerts.map((a, i) => <div key={i} style={{ padding: "12px 14px", borderRadius: 16, marginBottom: 6, background: dark ? "rgba(30,10,10,0.85)" : "#FEF2F2", border: "1.5px solid #EF444433", display: "flex", alignItems: "center", gap: 10 }}>
+        {/* Critical alerts — glass red */}
+        {criticalAlerts.map((a, i) => <div key={i} style={{ ...GL(dark ? "rgba(239,68,68,0.12)" : "rgba(254,226,226,0.75)", 16), padding: "12px 14px", marginBottom: 6, border: "1.5px solid rgba(239,68,68,0.28)", boxShadow: "0 4px 16px rgba(239,68,68,0.12), inset 0 1px 0 rgba(255,255,255,0.5)", display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 22 }}>🚨</span>
           <p style={{ fontSize: 14, fontWeight: 800, color: "#EF4444", flex: 1 }}>{a.m}</p>
         </div>)}
 
-        {/* Soft alerts — collapsible */}
+        {/* Soft alerts — collapsible, glass amber */}
         {softAlerts.length > 0 && <div style={{ marginBottom: 12 }}>
-          <button onClick={() => setAlertsOpen(p => !p)} style={{ width: "100%", padding: "11px 14px", borderRadius: 14, background: dark ? "rgba(30,25,10,0.7)" : "#FFFBEB", border: "1px solid #F59E0B44", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, marginBottom: alertsOpen ? 6 : 0 }}>
+          <button onClick={() => setAlertsOpen(p => !p)} style={{ ...GL(dark ? "rgba(245,158,11,0.08)" : "rgba(255,251,235,0.78)", 14), width: "100%", padding: "11px 14px", border: "1px solid rgba(245,158,11,0.3)", boxShadow: "0 4px 16px rgba(245,158,11,0.08), inset 0 1px 0 rgba(255,255,255,0.7)", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, marginBottom: alertsOpen ? 6 : 0 }}>
             <span style={{ fontSize: 16 }}>⚠️</span>
             <p style={{ fontSize: 13, fontWeight: 800, color: "#D97706", flex: 1, textAlign: "left" }}>{softAlerts.length} aviso{softAlerts.length !== 1 ? "s" : ""}</p>
             <span style={{ fontSize: 14, color: T.soft }}>{alertsOpen ? "▲" : "▼"}</span>
           </button>
-          {alertsOpen && softAlerts.map((a, i) => <div key={i} onClick={() => { if (a.m.includes("tarea")) setView("tasks"); }} style={{ padding: "9px 14px", borderRadius: 12, marginBottom: 4, background: dark ? "rgba(20,20,31,0.5)" : "rgba(255,255,255,0.7)", border: "1px solid #F59E0B22", display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+          {alertsOpen && softAlerts.map((a, i) => <div key={i} onClick={() => { if (a.m.includes("tarea")) setView("tasks"); }} style={{ ...GL(dark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.65)", 12), padding: "9px 14px", marginBottom: 4, border: "1px solid rgba(245,158,11,0.18)", display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
             <p style={{ fontSize: 12, fontWeight: 700, color: "#D97706", flex: 1 }}>{a.m}</p>
             <span style={{ fontSize: 11, color: T.soft }}>›</span>
           </div>)}
         </div>}
 
-        {/* Última toma — main card */}
-        <div onClick={() => setSub("feed")} style={{ background: dark ? "rgba(249,168,212,0.08)" : "#FEF0EB", borderRadius: 24, padding: "18px 20px", marginBottom: 10, cursor: "pointer", border: `1.5px solid ${T.accent}22` }}>
-          <p style={{ fontSize: 11, fontWeight: 800, color: T.accent, marginBottom: 6 }}>🍼 ÚLTIMA TOMA</p>
+        {/* Última toma — hero card glass orange */}
+        <div onClick={() => setSub("feed")} style={{ ...GL(dark ? "rgba(249,115,22,0.1)" : "rgba(255,247,237,0.82)", 26), padding: "18px 20px", marginBottom: 10, cursor: "pointer", border: `1.5px solid ${dark ? "rgba(249,115,22,0.2)" : "rgba(255,255,255,0.85)"}`, boxShadow: dark ? "0 8px 32px rgba(249,115,22,0.15), inset 0 1px 0 rgba(255,255,255,0.07)" : `0 8px 32px rgba(227,111,71,0.12), 0 2px 8px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.95)` }}>
+          <p style={{ fontSize: 11, fontWeight: 800, color: T.accent, marginBottom: 6, letterSpacing: 0.5 }}>🍼 ÚLTIMA TOMA</p>
           {lF ? <>
             <p style={{ fontSize: 42, fontWeight: 900, lineHeight: 1, marginBottom: 4 }}>{lF.estimatedOz ? "~" : ""}{lF.oz}<span style={{ fontSize: 18, fontWeight: 600, color: T.soft }}>oz</span></p>
             <p style={{ fontSize: 14, color: T.soft, fontWeight: 600 }}>{rel(lF.ts)} · {fmt(lF.ts)}</p>
@@ -734,44 +743,44 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
           </> : <p style={{ fontSize: 18, fontWeight: 700, color: T.soft }}>Sin registros — toca para registrar</p>}
         </div>
 
-        {/* Resumen del día */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 7, marginBottom: 10 }}>
-          <div style={{ background: T.card, borderRadius: 16, padding: "14px 10px", textAlign: "center", border: `1px solid ${T.border}` }}>
+        {/* Resumen del día — 3 tinted glass cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+          <div style={{ ...GL(dark ? "rgba(249,168,212,0.08)" : "rgba(253,242,248,0.75)", 18), padding: "14px 10px", textAlign: "center" }}>
             <p style={{ fontSize: 26, fontWeight: 900, color: feedStatus === "ok" ? T.ok : feedStatus === "warn" ? "#F59E0B" : T.text, lineHeight: 1 }}>{tOz}</p>
             <p style={{ fontSize: 11, fontWeight: 700, color: T.soft, marginTop: 3 }}>oz hoy</p>
             <p style={{ fontSize: 10, color: T.soft }}>{goals.ozLabel}</p>
           </div>
-          <div style={{ background: T.card, borderRadius: 16, padding: "14px 10px", textAlign: "center", border: `1px solid ${T.border}` }}>
+          <div style={{ ...GL(dark ? "rgba(125,211,252,0.07)" : "rgba(239,246,255,0.75)", 18), padding: "14px 10px", textAlign: "center" }}>
             <p style={{ fontSize: 26, fontWeight: 900, color: wetStatus === "ok" ? T.ok : wetStatus === "warn" ? "#F59E0B" : T.text, lineHeight: 1 }}>{tWet}</p>
             <p style={{ fontSize: 11, fontWeight: 700, color: T.soft, marginTop: 3 }}>💧 pipí</p>
             <p style={{ fontSize: 10, color: T.soft }}>{goals.wetLabel}</p>
           </div>
-          <div style={{ background: T.card, borderRadius: 16, padding: "14px 10px", textAlign: "center", border: `1px solid ${T.border}` }}>
+          <div style={{ ...GL(dark ? "rgba(196,181,253,0.08)" : "rgba(245,243,255,0.75)", 18), padding: "14px 10px", textAlign: "center" }}>
             <p style={{ fontSize: 26, fontWeight: 900, color: sleepStatus === "ok" ? T.ok : sleepStatus === "warn" ? "#F59E0B" : T.text, lineHeight: 1 }}>{tSlH}</p>
             <p style={{ fontSize: 11, fontWeight: 700, color: T.soft, marginTop: 3 }}>h sueño</p>
             <p style={{ fontSize: 10, color: T.soft }}>{goals.sleepLabel}</p>
           </div>
         </div>
 
-        {/* Registrar */}
+        {/* Registrar — glass tinted per category */}
         <p style={{ fontSize: 12, fontWeight: 800, color: T.soft, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.8 }}>Registrar</p>
         <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
           {REC.filter(r => hp(r.p)).map(r => (
-            <button key={r.id} onClick={() => setSub(r.id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 4px", borderRadius: 18, background: r.c + (dark ? "22" : "20"), border: `1.5px solid ${r.c}${dark ? "33" : "44"}`, cursor: "pointer" }}>
+            <button key={r.id} onClick={() => setSub(r.id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 4px", borderRadius: 20, background: r.c + (dark ? "18" : "30"), backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: `1px solid ${r.c}${dark ? "30" : "55"}`, boxShadow: dark ? `0 4px 16px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.06)` : `0 4px 16px ${r.c}22, 0 2px 4px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.85)`, cursor: "pointer" }}>
               <span style={{ fontSize: 26 }}>{r.e}</span>
               <span style={{ fontSize: 10, fontWeight: 700, color: T.text }}>{r.l}</span>
             </button>
           ))}
         </div>
 
-        {/* Tareas de hoy */}
-        {(todayTasks.length > 0 || overdueTasks.length > 0) && <div style={{ ...CS, padding: "14px 16px", marginBottom: 10, cursor: "pointer" }} onClick={() => setView("tasks")}>
+        {/* Tareas de hoy — glass white */}
+        {(todayTasks.length > 0 || overdueTasks.length > 0) && <div style={{ ...GL(dark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.68)", 20), padding: "14px 16px", marginBottom: 10, cursor: "pointer" }} onClick={() => setView("tasks")}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <p style={{ fontSize: 14, fontWeight: 800 }}>📌 Tareas de hoy</p>
             <span style={{ fontSize: 12, color: T.accent, fontWeight: 700 }}>ver todas →</span>
           </div>
           {[...overdueTasks, ...todayTasks].slice(0, 3).map(t => { const cat = TASK_CATS.find(c => c.id === t.cat); return (
-            <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderTop: `1px solid ${T.border}` }}>
+            <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderTop: `1px solid ${dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)"}` }}>
               <span style={{ fontSize: 18 }}>{cat?.e || "📋"}</span>
               <div style={{ flex: 1 }}>
                 <p style={{ fontSize: 13, fontWeight: 700 }}>{t.title}</p>
@@ -781,27 +790,27 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
           );})}
         </div>}
 
-        {/* Grid de navegación */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 10 }}>
-          {hp("view_milestones") && <button onClick={() => setView("milestones")} style={{ ...CS, padding: "14px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-            <span style={{ fontSize: 24 }}>🌟</span>
+        {/* Grid de navegación — glass white */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+          {hp("view_milestones") && <button onClick={() => setView("milestones")} style={{ ...GL(dark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.65)", 22), padding: "16px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+            <span style={{ fontSize: 26 }}>🌟</span>
             <div><p style={{ fontSize: 14, fontWeight: 800 }}>Hitos</p><p style={{ fontSize: 11, color: T.soft }}>{msDone.length}/{milestones.length}</p></div>
           </button>}
-          {hp("manage_family") && <button onClick={() => setView("family")} style={{ ...CS, padding: "14px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-            <span style={{ fontSize: 24 }}>👨‍👩‍👧</span>
+          {hp("manage_family") && <button onClick={() => setView("family")} style={{ ...GL(dark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.65)", 22), padding: "16px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+            <span style={{ fontSize: 26 }}>👨‍👩‍👧</span>
             <div><p style={{ fontSize: 14, fontWeight: 800 }}>Familia</p><p style={{ fontSize: 11, color: T.soft }}>{mem.length} miembro{mem.length !== 1 ? "s" : ""}</p></div>
           </button>}
-          <button onClick={() => setView("tasks")} style={{ ...CS, padding: "14px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-            <span style={{ fontSize: 24 }}>📌</span>
+          <button onClick={() => setView("tasks")} style={{ ...GL(dark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.65)", 22), padding: "16px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+            <span style={{ fontSize: 26 }}>📌</span>
             <div><p style={{ fontSize: 14, fontWeight: 800 }}>Tareas</p><p style={{ fontSize: 11, color: T.soft }}>{pendingTasks.length} pendiente{pendingTasks.length !== 1 ? "s" : ""}</p></div>
           </button>
-          {hp("use_ai") && <button onClick={() => setView("ai")} style={{ ...CS, padding: "14px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-            <span style={{ fontSize: 24 }}>🤖</span>
+          {hp("use_ai") && <button onClick={() => setView("ai")} style={{ ...GL(dark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.65)", 22), padding: "16px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+            <span style={{ fontSize: 26 }}>🤖</span>
             <div><p style={{ fontSize: 14, fontWeight: 800 }}>IA</p><p style={{ fontSize: 11, color: T.soft }}>Asistente</p></div>
           </button>}
         </div>
 
-        {qs.filter(q => q.status === "pending").length > 0 && hp("view_questions") && <button onClick={() => setView("questions")} style={{ width: "100%", padding: "12px 14px", borderRadius: 14, background: dark ? "#2A2511" : "#FEF9E7", border: `1px solid ${dark ? "#554411" : "#FDE68A"}`, cursor: "pointer", textAlign: "left" }}>
+        {qs.filter(q => q.status === "pending").length > 0 && hp("view_questions") && <button onClick={() => setView("questions")} style={{ ...GL(dark ? "rgba(245,158,11,0.07)" : "rgba(255,251,235,0.78)", 14), width: "100%", padding: "12px 14px", border: "1px solid rgba(245,158,11,0.28)", boxShadow: "0 4px 16px rgba(245,158,11,0.08), inset 0 1px 0 rgba(255,255,255,0.7)", cursor: "pointer", textAlign: "left" }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: "#D97706" }}>📋 {qs.filter(q => q.status === "pending").length} pregunta(s) para el pediatra</p>
         </button>}
       </div>}
@@ -1195,7 +1204,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
       </div>}
 
       {/* NAV */}
-      {!sub && !msD && !editM && <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: T.glass, backdropFilter: "blur(20px)", borderTop: `1px solid ${T.border}`, display: "flex", justifyContent: "space-around", padding: "4px 3px 14px", zIndex: 100 }}>
+      {!sub && !msD && !editM && <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: dark ? "rgba(18,12,8,0.82)" : "rgba(255,255,255,0.72)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", borderTop: dark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(255,255,255,0.9)", boxShadow: dark ? "0 -8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.07)" : "0 -8px 32px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.95)", borderRadius: "22px 22px 0 0", display: "flex", justifyContent: "space-around", padding: "4px 3px 14px", zIndex: 100 }}>
         {[
           { id: "home", i: "🏠", l: "Inicio", show: true },
           { id: "history", i: "📊", l: "Historial", show: hp("view_history") },
