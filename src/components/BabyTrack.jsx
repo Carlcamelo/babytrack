@@ -45,7 +45,14 @@ const ROLES = [
   { id: "cuidador", l: "Cuidador", e: "🤲" },
   { id: "observador", l: "Observador", e: "👀" },
 ];
-const FT = [{ id: "breast", l: "Materna", e: "🤱", c: "#F9A8D4" }, { id: "formula", l: "Fórmula", e: "🍼", c: "#7DD3FC" }, { id: "mixed", l: "Mixta", e: "🫧", c: "#C4B5FD" }];
+const FT = [{ id: "nursing", l: "Pecho directo", e: "🤱", c: "#F9A8D4" }, { id: "pumped", l: "Leche extraída", e: "🥛", c: "#93C5FD" }, { id: "formula", l: "Fórmula", e: "🫧", c: "#7DD3FC" }, { id: "mixed", l: "Mixta", e: "🔄", c: "#C4B5FD" }];
+// Oz estimadas por minuto de lactancia activa (estudios de transferencia de leche, por rango de edad)
+const NURSING_RATE = { "0-3 meses": 0.13, "3-6 meses": 0.16, "6-9 meses": 0.19, "9-12 meses": 0.20 };
+const estimateNursingOz = (sessions, ageRange) => {
+  const rate = NURSING_RATE[ageRange] || 0.16;
+  const totalMin = sessions.reduce((s, x) => s + x.minutes, 0);
+  return Math.round(totalMin * rate * 10) / 10;
+};
 const DTP = [{ id: "pee", l: "Pipí", e: "💧", c: "#7DD3FC" }, { id: "poo", l: "Popó", e: "💩", c: "#FDBA74" }, { id: "both", l: "Ambos", e: "✨", c: "#A78BFA" }];
 const PCL = [{ id: "yellow", l: "Amarillo", h: "#FBBF24" }, { id: "green", l: "Verde", h: "#34D399" }, { id: "brown", l: "Café", h: "#A16207" }, { id: "dark", l: "Oscuro", h: "#44403C" }];
 const PCN = [{ id: "liquid", l: "Líquida" }, { id: "soft", l: "Blanda" }, { id: "normal", l: "Normal" }, { id: "hard", l: "Dura" }];
@@ -192,10 +199,13 @@ export default function BabyTrack({ auth, data }) {
   const cropCanvasRef = useRef(null);
   const chatRef = useRef(null);
   const fileRef = useRef(null);
-  const [fTy, setFTy] = useState("formula");
+  const [fSubtype, setFSubtype] = useState("formula"); // nursing | pumped | formula | mixed
   const [fOz, setFOz] = useState(4);
   const [fNo, setFNo] = useState("");
   const [fTs, setFTs] = useState("");
+  const [nursingActive, setNursingActive] = useState(null); // { breast: "left"|"right", startedAt: iso }
+  const [nursingSessions, setNursingSessions] = useState([]); // [{ breast, minutes }]
+  const [nursingElapsed, setNursingElapsed] = useState(0); // segundos
   const [dTy, setDTy] = useState("pee");
   const [pCo, setPCo] = useState("yellow");
   const [pCn, setPCn] = useState("normal");
@@ -223,6 +233,13 @@ export default function BabyTrack({ auth, data }) {
     return () => clearInterval(iv);
   }, [slpA]);
 
+  // Nursing timer
+  useEffect(() => {
+    if (!nursingActive) { setNursingElapsed(0); return; }
+    const iv = setInterval(() => setNursingElapsed(Math.floor((Date.now() - new Date(nursingActive.startedAt)) / 1000)), 1000);
+    return () => clearInterval(iv);
+  }, [nursingActive]);
+
   useEffect(() => { chatRef.current?.scrollIntoView({ behavior: "smooth" }); }, [aiMsgs, aiL]);
 
   // Helpers
@@ -234,12 +251,17 @@ export default function BabyTrack({ auth, data }) {
 
   // FEEDING stats
   const tF = tE.filter(e => e.type === "feed");
-  const tOz = tF.reduce((s, e) => s + (e.oz || 0), 0);
+  const tOz = Math.round(tF.reduce((s, e) => s + (e.oz || 0), 0) * 10) / 10;
   const feedPct = Math.min(100, Math.round((tOz / goals.ozMin) * 100));
   const feedStatus = tOz >= goals.ozMin ? "ok" : tOz >= goals.ozMin * 0.6 ? "warn" : "low";
   const lF = [...ent].filter(e => e.type === "feed").pop();
   const l7 = ent.filter(e => { try { return Date.now() - new Date(e.ts) < 7 * 864e5; } catch { return false; } });
   const a7 = l7.filter(e => e.type === "feed").length ? Math.round(l7.filter(e => e.type === "feed").reduce((s, e) => s + (e.oz || 0), 0) / 7 * 10) / 10 : 0;
+  // Último pecho usado (para indicator de siguiente toma)
+  const lastNursingEntry = [...ent].filter(e => e.type === "feed" && (e.subtype === "nursing" || e.subtype === "mixed" || e.feedType === "breast")).pop();
+  const lastBreastUsed = lastNursingEntry?.lastBreast || null;
+  const nextBreast = lastBreastUsed === "left" ? "right" : lastBreastUsed === "right" ? "left" : null;
+  const nursingToday = tF.filter(e => e.subtype === "nursing" || e.subtype === "mixed" || e.feedType === "breast").length;
 
   // SLEEP stats
   const tSl = tE.filter(e => e.type === "sleep");
@@ -301,7 +323,43 @@ export default function BabyTrack({ auth, data }) {
   const flash = m => { setOkM(m); setOk(true); setTimeout(() => { setOk(false); setSub(null); if (view !== "family" && view !== "reminders") setView("home"); }, 900); };
   const gTs = c => { try { return c ? new Date(c).toISOString() : new Date().toISOString(); } catch { return new Date().toISOString(); } };
 
-  const addFeed = () => { const entry = { id: Date.now(), type: "feed", feedType: fTy, oz: fOz, notes: fNo, by: cu.name, ts: gTs(fTs) }; setEnt(p => [...p, entry]); data.addEntry({ type: "feed", data: { feedType: fTy, oz: fOz, notes: fNo }, by: cu.name, ts: gTs(fTs) }); setFOz(4); setFNo(""); setFTs(""); flash("Toma ✓"); };
+  const startNursingBreast = breast => {
+    if (nursingActive) {
+      const minutes = Math.max(1, Math.floor(nursingElapsed / 60));
+      setNursingSessions(p => [...p, { breast: nursingActive.breast, minutes }]);
+    }
+    setNursingActive({ breast, startedAt: new Date().toISOString() });
+  };
+  const resetNursingState = () => { setNursingActive(null); setNursingSessions([]); setNursingElapsed(0); };
+  const addFeed = () => {
+    let entryData = {};
+    if (fSubtype === "nursing" || fSubtype === "mixed") {
+      let sessions = [...nursingSessions];
+      if (nursingActive) {
+        const minutes = Math.max(1, Math.floor(nursingElapsed / 60));
+        sessions = [...sessions, { breast: nursingActive.breast, minutes }];
+      }
+      if (sessions.length === 0 && fSubtype === "nursing") return;
+      const estimatedOz = estimateNursingOz(sessions, prof.ageRange);
+      const lastBreast = sessions.length ? sessions[sessions.length - 1].breast : null;
+      if (fSubtype === "nursing") {
+        entryData = { feedType: "nursing", subtype: "nursing", sessions, estimatedOz, lastBreast, oz: estimatedOz };
+      } else {
+        const total = Math.round((estimatedOz + fOz) * 10) / 10;
+        entryData = { feedType: "mixed", subtype: "mixed", sessions, estimatedNursingOz: estimatedOz, supplementOz: fOz, lastBreast, oz: total };
+      }
+    } else if (fSubtype === "pumped") {
+      entryData = { feedType: "pumped", subtype: "pumped", oz: fOz };
+    } else {
+      entryData = { feedType: "formula", subtype: "formula", oz: fOz };
+    }
+    const entry = { id: Date.now(), type: "feed", ...entryData, notes: fNo, by: cu.name, ts: gTs(fTs) };
+    setEnt(p => [...p, entry]);
+    data.addEntry({ type: "feed", data: entryData, by: cu.name, ts: gTs(fTs) });
+    setFOz(4); setFNo(""); setFTs("");
+    resetNursingState();
+    flash("Toma ✓");
+  };
   const addDiaper = () => { const d = { diaperType: dTy, ...(dTy !== "pee" ? { pooColor: pCo, pooCon: pCn } : {}) }; const entry = { id: Date.now(), type: "diaper", ...d, by: cu.name, ts: gTs() }; setEnt(p => [...p, entry]); data.addEntry({ type: "diaper", data: d, by: cu.name }); flash("Pañal ✓"); };
   const startSlp = ty => setSlpA({ type: ty, at: new Date().toISOString() });
   const stopSlp = () => { if (!slpA) return; const dur = Math.floor((Date.now() - new Date(slpA.at)) / 6e4); const entry = { id: Date.now(), type: "sleep", sleepType: slpA.type, duration: dur, by: cu.name, ts: slpA.at }; setEnt(p => [...p, entry]); data.addEntry({ type: "sleep", data: { sleepType: slpA.type, duration: dur }, by: cu.name, ts: slpA.at }); setSlpA(null); flash(`${dur}min ✓`); };
@@ -357,7 +415,14 @@ export default function BabyTrack({ auth, data }) {
     const h = "Fecha,Hora,Tipo,Detalle,Valor,Por\n";
     const rows = ent.map(e => {
       let d = "", v = "";
-      if (e.type === "feed") { d = FT.find(f => f.id === e.feedType)?.l || ""; v = e.oz + "oz"; }
+      if (e.type === "feed") {
+        const sub = e.subtype || e.feedType;
+        const totalMin = (e.sessions || []).reduce((s, x) => s + x.minutes, 0);
+        if (sub === "nursing" || sub === "breast") { d = "Pecho directo"; v = `~${e.estimatedOz || e.oz || 0}oz (est.) ${totalMin}min`; }
+        else if (sub === "pumped") { d = "Leche extraída"; v = `${e.oz}oz`; }
+        else if (sub === "mixed") { d = "Mixta"; v = `${e.oz}oz (pecho+fórmula)`; }
+        else { d = "Fórmula"; v = `${e.oz || 0}oz`; }
+      }
       else if (e.type === "diaper") { d = DTP.find(x => x.id === e.diaperType)?.l || ""; }
       else if (e.type === "sleep") { d = e.sleepType === "nap" ? "Siesta" : "Noche"; v = (e.duration || "?") + "min"; }
       else if (e.type === "temp") { v = e.temp + "°C"; }
@@ -373,7 +438,7 @@ export default function BabyTrack({ auth, data }) {
     const ctx = `Eres asistente pediátrico (AAP/OMS). Español. Simple y cálido.
 Bebé: ${prof.name || "bebé"}, ${prof.birthDate ? fmtAge(prof.birthDate) : prof.ageRange}, ${prof.gender === "female" ? "niña" : "niño"}.
 Quien pregunta: ${cu.name} (${FAMILY_ROLES.find(r => r.id === cu.familyRole)?.l || "cuidador"}).
-Hoy: ${tF.length} tomas(${tOz}oz, meta:${goals.ozLabel}), ${tD} pañales(${tWet}mojados/${tPoo}popó, meta:${goals.wetLabel}), sueño:${tSlH}h(meta:${goals.sleepLabel}). Prom7d:${a7}oz/día.
+Hoy: ${tF.length} tomas(${tOz}oz total[${nursingToday}pecho+${tF.length - nursingToday}fórmula/extraída], meta:${goals.ozLabel}), ${tD} pañales(${tWet}mojados/${tPoo}popó, meta:${goals.wetLabel}), sueño:${tSlH}h(meta:${goals.sleepLabel}). Prom7d:${a7}oz/día.${nextBreast ? ` Próx.toma→${nextBreast === "left" ? "izquierdo" : "derecho"}.` : ""}
 ${lG ? `Peso:${lG.weight}kg Talla:${lG.height}cm` : ""} ${lT ? `Temp:${lT.temp}°C` : ""}
 Score: ${dailyScore}/100 (🍼${feedScore}/30 😴${sleepScore}/30 🧷${wetScore}/20 🌡️${tempScore}/10).
 Preguntas pediatra:[${qs.filter(q => q.status === "pending").map(q => q.text).join(",")}]
@@ -621,7 +686,12 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
           <div style={{ background: T.card, borderRadius: 16, padding: "12px 14px", border: `1px solid ${T.border}` }}>
             <p style={{ fontSize: 10, fontWeight: 700, color: T.soft, marginBottom: 4 }}>⏱ Última toma</p>
             <p style={{ fontSize: 16, fontWeight: 900 }}>{lF ? rel(lF.ts) : "—"}</p>
-            <p style={{ fontSize: 10, color: T.soft }}>{lF ? `${lF.oz}oz · ${fmt(lF.ts)}` : "Sin registros"}</p></div>
+            <p style={{ fontSize: 10, color: T.soft }}>
+              {lF ? `${lF.estimatedOz ? "~" : ""}${lF.oz}oz · ${fmt(lF.ts)}` : "Sin registros"}
+            </p>
+            {nextBreast && <p style={{ fontSize: 10, fontWeight: 800, color: "#F472B6", marginTop: 3 }}>
+              Próxima: {nextBreast === "left" ? "🫲 Izquierdo" : "🫱 Derecho"}
+            </p>}</div>
           <div style={{ background: T.card, borderRadius: 16, padding: "12px 14px", border: `1px solid ${T.border}` }}>
             <p style={{ fontSize: 10, fontWeight: 700, color: T.soft, marginBottom: 4 }}>🌡️ Temperatura</p>
             <p style={{ fontSize: 16, fontWeight: 900, color: lT?.temp >= 38 ? "#EF4444" : lT?.temp >= 37.5 ? "#F59E0B" : T.text }}>{lT ? `${lT.temp}°C` : "—"}</p>
@@ -655,17 +725,117 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
 
       {/* FEED */}
       {sub === "feed" && <div style={{ padding: "14px 16px 40px", animation: "fadeUp 0.3s ease", background: dark ? "linear-gradient(180deg,#1A1015 0%,#0C0C12 100%)" : "linear-gradient(180deg,#FEF0EB 0%,#FAFAF7 30%)", minHeight: "100vh" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}><Bk fn={() => setSub(null)} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>🍼 Alimentación</h2></div>
-        <SL>Tipo</SL><div style={{ display: "flex", gap: 7, marginBottom: 18 }}>{FT.map(x => <button key={x.id} onClick={() => setFTy(x.id)} style={{ flex: 1, padding: "14px 4px", borderRadius: 16, cursor: "pointer", background: fTy === x.id ? x.c + (dark ? "28" : "20") : T.card, textAlign: "center", border: `2px solid ${fTy === x.id ? x.c : T.border}` }}><span style={{ fontSize: 26, display: "block", marginBottom: 2 }}>{x.e}</span><span style={{ fontSize: 12, fontWeight: fTy === x.id ? 800 : 600 }}>{x.l}</span></button>)}</div>
-        <SL>Onzas</SL><div style={{ ...CS, textAlign: "center", marginBottom: 10, padding: 18 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
-            <button onClick={() => setFOz(Math.max(0.5, fOz - 0.5))} style={{ width: 48, height: 48, borderRadius: 16, background: T.accentL, border: "none", fontSize: 22, cursor: "pointer", fontWeight: 800, color: T.accent }}>−</button>
-            <div><span style={{ fontSize: 48, fontWeight: 900, color: T.accent }}>{fOz}</span><p style={{ fontSize: 12, color: T.soft }}>oz</p></div>
-            <button onClick={() => setFOz(fOz + 0.5)} style={{ width: 48, height: 48, borderRadius: 16, background: T.accentL, border: "none", fontSize: 22, cursor: "pointer", fontWeight: 800, color: T.accent }}>+</button></div></div>
-        <div style={{ display: "flex", gap: 5, marginBottom: 14, flexWrap: "wrap" }}>{[2, 3, 4, 5, 6, 7, 8].map(o => <button key={o} onClick={() => setFOz(o)} style={{ padding: "7px 13px", borderRadius: 11, background: fOz === o ? T.accent : T.card, color: fOz === o ? "#fff" : T.soft, border: `1.5px solid ${fOz === o ? T.accent : T.border}`, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{o}oz</button>)}</div>
-        <SL>Hora (vacío = ahora)</SL><input type="datetime-local" value={fTs} onChange={e => setFTs(e.target.value)} style={{ width: "100%", padding: 11, borderRadius: 14, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, outline: "none", marginBottom: 10 }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}><Bk fn={() => { resetNursingState(); setSub(null); }} /><h2 style={{ fontSize: 19, fontWeight: 900 }}>🍼 Alimentación</h2></div>
+
+        {/* Tipo de toma */}
+        <SL>Tipo de toma</SL>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 20 }}>
+          {FT.map(x => <button key={x.id} onClick={() => { setFSubtype(x.id); resetNursingState(); }} style={{ padding: "14px 4px", borderRadius: 16, cursor: "pointer", background: fSubtype === x.id ? x.c + (dark ? "28" : "20") : T.card, textAlign: "center", border: `2px solid ${fSubtype === x.id ? x.c : T.border}` }}>
+            <span style={{ fontSize: 24, display: "block", marginBottom: 2 }}>{x.e}</span>
+            <span style={{ fontSize: 12, fontWeight: fSubtype === x.id ? 800 : 600 }}>{x.l}</span>
+          </button>)}
+        </div>
+
+        {/* ── PECHO DIRECTO ── */}
+        {(fSubtype === "nursing" || fSubtype === "mixed") && <>
+          <SL>{fSubtype === "mixed" ? "Pecho (parte 1)" : "Cronómetro por pecho"}</SL>
+          {!nursingActive ? (
+            <>
+              <div style={{ display: "flex", gap: 7, marginBottom: 12 }}>
+                {[{ id: "left", l: "Izquierdo", e: "🫲" }, { id: "right", l: "Derecho", e: "🫱" }].map(b => (
+                  <button key={b.id} onClick={() => startNursingBreast(b.id)} style={{ flex: 1, padding: "20px 10px", borderRadius: 18, cursor: "pointer", background: `linear-gradient(135deg,#F9A8D4,#F472B6)`, textAlign: "center", border: "none", color: "#fff", boxShadow: "0 4px 14px #F472B633" }}>
+                    <span style={{ fontSize: 28, display: "block", marginBottom: 4 }}>{b.e}</span>
+                    <span style={{ fontSize: 13, fontWeight: 800 }}>Iniciar {b.l}</span>
+                  </button>
+                ))}
+              </div>
+              {nursingSessions.length > 0 && (() => {
+                const totalMin = nursingSessions.reduce((s, x) => s + x.minutes, 0);
+                const estOz = estimateNursingOz(nursingSessions, prof.ageRange);
+                return (
+                  <div style={{ ...CS, marginBottom: 14, padding: "14px 16px", borderLeft: `3px solid #F472B6` }}>
+                    <p style={{ fontSize: 11, color: T.soft, marginBottom: 6 }}>
+                      {nursingSessions.map(s => `${s.breast === "left" ? "🫲 Izq" : "🫱 Der"} ${s.minutes}min`).join("  +  ")}
+                    </p>
+                    <p style={{ fontSize: 20, fontWeight: 900, color: "#F472B6" }}>
+                      ~{estOz} oz <span style={{ fontSize: 12, fontWeight: 600, color: T.soft }}>estimado ({totalMin} min)</span>
+                    </p>
+                    <p style={{ fontSize: 10, color: T.soft, marginTop: 4 }}>
+                      Tasa {NURSING_RATE[prof.ageRange] || 0.16} oz/min · {prof.ageRange}
+                    </p>
+                  </div>
+                );
+              })()}
+            </>
+          ) : (
+            <>
+              <div style={{ textAlign: "center", padding: "18px 0 12px", position: "relative" }}>
+                <p style={{ fontSize: 12, color: "#F472B6", fontWeight: 700, marginBottom: 4 }}>
+                  {nursingActive.breast === "left" ? "🫲 Pecho izquierdo" : "🫱 Pecho derecho"}
+                </p>
+                <p style={{ fontSize: 56, fontWeight: 900, color: "#F472B6", letterSpacing: -2, lineHeight: 1 }}>{fSec(nursingElapsed)}</p>
+                {nursingSessions.length > 0 && (
+                  <p style={{ fontSize: 11, color: T.soft, marginTop: 6 }}>
+                    Antes: {nursingSessions.map(s => `${s.breast === "left" ? "Izq" : "Der"} ${s.minutes}min`).join(" + ")}
+                  </p>
+                )}
+              </div>
+              {/* Live estimated oz */}
+              {(() => {
+                const curMin = Math.max(1, Math.floor(nursingElapsed / 60));
+                const all = [...nursingSessions, { breast: nursingActive.breast, minutes: curMin }];
+                return (
+                  <div style={{ textAlign: "center", marginBottom: 14 }}>
+                    <p style={{ fontSize: 15, fontWeight: 800, color: "#F472B6" }}>~{estimateNursingOz(all, prof.ageRange)} oz estimado</p>
+                  </div>
+                );
+              })()}
+              <div style={{ display: "flex", gap: 7, marginBottom: 14 }}>
+                <button onClick={() => startNursingBreast(nursingActive.breast === "left" ? "right" : "left")} style={{ flex: 1, padding: "13px", borderRadius: 16, background: T.accentL, border: `1.5px solid ${T.border}`, cursor: "pointer", fontSize: 13, fontWeight: 700, color: T.accent }}>
+                  Cambiar a {nursingActive.breast === "left" ? "🫱 Derecho" : "🫲 Izquierdo"}
+                </button>
+                <button onClick={() => { const min = Math.max(1, Math.floor(nursingElapsed / 60)); setNursingSessions(p => [...p, { breast: nursingActive.breast, minutes: min }]); setNursingActive(null); }} style={{ flex: 1, padding: "13px", borderRadius: 16, background: "#F9A8D4", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 800, color: "#9D174D" }}>
+                  ⏹ Detener
+                </button>
+              </div>
+            </>
+          )}
+        </>}
+
+        {/* ── SUPLEMENTO (MIXTA) / LECHE EXTRAÍDA / FÓRMULA ── */}
+        {(fSubtype === "pumped" || fSubtype === "formula" || fSubtype === "mixed") && <>
+          <SL>{fSubtype === "mixed" ? "Suplemento de fórmula (oz)" : fSubtype === "pumped" ? "Leche extraída (oz)" : "Onzas"}</SL>
+          <div style={{ ...CS, textAlign: "center", marginBottom: 10, padding: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
+              <button onClick={() => setFOz(Math.max(0.5, fOz - 0.5))} style={{ width: 48, height: 48, borderRadius: 16, background: T.accentL, border: "none", fontSize: 22, cursor: "pointer", fontWeight: 800, color: T.accent }}>−</button>
+              <div><span style={{ fontSize: 48, fontWeight: 900, color: T.accent }}>{fOz}</span><p style={{ fontSize: 12, color: T.soft }}>oz</p></div>
+              <button onClick={() => setFOz(fOz + 0.5)} style={{ width: 48, height: 48, borderRadius: 16, background: T.accentL, border: "none", fontSize: 22, cursor: "pointer", fontWeight: 800, color: T.accent }}>+</button>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 5, marginBottom: 14, flexWrap: "wrap" }}>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map(o => <button key={o} onClick={() => setFOz(o)} style={{ padding: "7px 13px", borderRadius: 11, background: fOz === o ? T.accent : T.card, color: fOz === o ? "#fff" : T.soft, border: `1.5px solid ${fOz === o ? T.accent : T.border}`, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{o}oz</button>)}
+          </div>
+          {/* Total estimado para mixta */}
+          {fSubtype === "mixed" && nursingSessions.length > 0 && (() => {
+            const estNursing = estimateNursingOz(nursingSessions, prof.ageRange);
+            return (
+              <div style={{ ...CS, marginBottom: 14, padding: "12px 16px", background: dark ? "#1A1228" : "#F5F3FF" }}>
+                <p style={{ fontSize: 11, color: T.soft, marginBottom: 2 }}>Total estimado de la toma</p>
+                <p style={{ fontSize: 20, fontWeight: 900, color: "#8B5CF6" }}>~{Math.round((estNursing + fOz) * 10) / 10} oz</p>
+                <p style={{ fontSize: 10, color: T.soft }}>🤱 ~{estNursing} oz pecho + 🫧 {fOz} oz fórmula</p>
+              </div>
+            );
+          })()}
+        </>}
+
+        {/* Hora y notas */}
+        {fSubtype !== "nursing" && <><SL>Hora (vacío = ahora)</SL><input type="datetime-local" value={fTs} onChange={e => setFTs(e.target.value)} style={{ width: "100%", padding: 11, borderRadius: 14, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, outline: "none", marginBottom: 10 }} /></>}
         <SL>Notas</SL><textarea value={fNo} onChange={e => setFNo(e.target.value)} placeholder="Opcional..." style={{ width: "100%", padding: 11, borderRadius: 14, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, resize: "none", height: 50, outline: "none" }} />
-        <button onClick={addFeed} style={{ width: "100%", padding: 15, borderRadius: 20, background: `linear-gradient(135deg,${T.accent},#D4623C)`, color: "#fff", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 800, marginTop: 16, boxShadow: "0 8px 24px rgba(227,111,71,0.3)" }}>Guardar ✓</button></div>}
+
+        <button onClick={addFeed} disabled={fSubtype === "nursing" && nursingSessions.length === 0 && !nursingActive} style={{ width: "100%", padding: 15, borderRadius: 20, background: (fSubtype === "nursing" && nursingSessions.length === 0 && !nursingActive) ? T.border : `linear-gradient(135deg,${T.accent},#D4623C)`, color: "#fff", border: "none", cursor: (fSubtype === "nursing" && nursingSessions.length === 0 && !nursingActive) ? "default" : "pointer", fontSize: 16, fontWeight: 800, marginTop: 16, boxShadow: "0 8px 24px rgba(227,111,71,0.3)" }}>
+          {fSubtype === "nursing" && nursingActive ? "⏹ Detener y Guardar" : "Guardar ✓"}
+        </button>
+      </div>}
 
       {/* DIAPER */}
       {sub === "diaper" && <div style={{ padding: "14px 16px 40px", animation: "fadeUp 0.3s ease", background: dark ? "linear-gradient(180deg,#0F1520 0%,#0C0C12 100%)" : "linear-gradient(180deg,#DBEAFE 0%,#FAFAF7 30%)", minHeight: "100vh" }}>
@@ -714,7 +884,14 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
           {ent.length > 0 && hp("export_data") && <button onClick={exportCSV} style={{ padding: "5px 10px", borderRadius: 10, background: T.accent, color: "#fff", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>📥 CSV</button>}</div>
         {ent.length === 0 ? <div style={{ textAlign: "center", padding: "50px 20px", color: T.soft }}><p style={{ fontSize: 40 }}>📝</p><p style={{ fontWeight: 700, marginTop: 8 }}>Sin registros</p></div>
           : [...ent].reverse().map((e, i) => { const rt = REC.find(r => r.id === e.type) || {}; let d = "";
-            if (e.type === "feed") d = `${e.oz}oz · ${FT.find(f => f.id === e.feedType)?.l || ""}`;
+            if (e.type === "feed") {
+              const sub = e.subtype || e.feedType;
+              const totalMin = (e.sessions || []).reduce((s, x) => s + x.minutes, 0);
+              if (sub === "nursing" || sub === "breast") d = `🤱 Pecho · ~${e.estimatedOz || e.oz || 0}oz (est.) · ${totalMin}min`;
+              else if (sub === "pumped") d = `🥛 Extraída · ${e.oz}oz`;
+              else if (sub === "mixed") d = `🔄 Mixta · ${e.oz}oz${totalMin ? ` · ${totalMin}min pecho` : ""}`;
+              else d = `🫧 Fórmula · ${e.oz || 0}oz`;
+            }
             else if (e.type === "diaper") d = DTP.find(x => x.id === e.diaperType)?.l || "";
             else if (e.type === "sleep") d = `${e.sleepType === "nap" ? "Siesta" : "Noche"} · ${e.duration || "?"}min`;
             else if (e.type === "temp") d = `${e.temp}°C${e.temp >= 38 ? " ⚠️" : ""}`;
