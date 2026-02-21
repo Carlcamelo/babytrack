@@ -613,7 +613,8 @@ Hitos alcanzados: [${msDone.map(m => milestones.find(x => x.id === m.id)?.l).fil
 @keyframes gradMove{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 @keyframes glow{0%,100%{box-shadow:0 0 20px rgba(227,111,71,0.3)}50%{box-shadow:0 0 40px rgba(227,111,71,0.6)}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:active{transform:scale(0.96)}`;
+button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:active{transform:scale(0.96)}
+html,body{background:${T.bg};margin:0;padding:0;min-height:100%}`;
 
   // ══ CROP MODAL (slider-only, no drag issues) ══
   const cropModal = cropSrc ? (
@@ -737,7 +738,7 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
   const SL = ({ children }) => <p style={{ fontSize: 11, fontWeight: 800, color: T.soft, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.8 }}>{children}</p>;
 
   return (
-    <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: dark ? T.bg : "linear-gradient(-45deg,#FEF0EB,#DBEAFE,#FDE8F0,#E0E7FF)", backgroundSize: dark ? undefined : "400% 400%", animation: dark ? undefined : "gradMove 14s ease infinite", fontFamily: "'Nunito',system-ui", color: T.text, position: "relative", transition: "background 0.3s" }}>
+    <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100dvh", background: dark ? T.bg : "linear-gradient(-45deg,#FEF0EB,#DBEAFE,#FDE8F0,#E0E7FF)", backgroundSize: dark ? undefined : "400% 400%", animation: dark ? undefined : "gradMove 14s ease infinite", fontFamily: "'Nunito',system-ui", color: T.text, position: "relative", transition: "background 0.3s" }}>
       <style>{css}</style>
       <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
 
@@ -1238,23 +1239,31 @@ button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:
       </div>}
 
       {/* AI */}
-      {view === "ai" && !sub && hp("use_ai") && <div style={{ padding: "12px 16px 0", animation: "fadeUp 0.3s ease", display: "flex", flexDirection: "column", height: "calc(100vh - 68px)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 34, height: 34, borderRadius: 12, background: "linear-gradient(135deg,#C4B5FD,#818CF8)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>🤖</div>
-            <div><p style={{ fontSize: 15, fontWeight: 900 }}>Asistente IA</p><p style={{ fontSize: 10, color: T.soft }}>{aiMsgs.length} msgs</p></div></div>
-          <div style={{ display: "flex", gap: 4 }}>
-            <button onClick={() => setQuickM(!quickM)} style={{ padding: "4px 7px", borderRadius: 8, background: quickM ? T.accent : T.card, color: quickM ? "#fff" : T.soft, border: `1px solid ${quickM ? T.accent : T.border}`, cursor: "pointer", fontSize: 10, fontWeight: 700 }}>⚡</button>
-            {aiMsgs.length > 0 && <button onClick={() => { setAiMsgs([]); data.clearAiMessages(); }} style={{ padding: "4px 7px", borderRadius: 8, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 10, color: T.soft }}>🗑️</button>}</div></div>
-        <div style={{ flex: 1, overflowY: "auto", paddingBottom: 6, display: "flex", flexDirection: "column", gap: 6 }}>
-          {aiMsgs.length === 0 && <div style={{ textAlign: "center", padding: "14px 6px" }}><p style={{ fontSize: 30, marginBottom: 6 }}>💬</p><p style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>Pregunta sobre {prof.name || "tu bebé"}</p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "center" }}>{(quickM ? QQS : QQS.slice(0, 6)).map((q, i) => <button key={i} onClick={() => { if (quickM) askAI(q); else setAiIn(q); }} style={{ padding: "6px 10px", borderRadius: 12, background: T.card, border: `1px solid ${T.border}`, fontSize: 11, color: T.soft, cursor: "pointer" }}>{q}</button>)}</div></div>}
-          {aiMsgs.map((m, i) => <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "85%", animation: "fadeUp 0.15s ease" }}><div style={{ padding: "8px 12px", borderRadius: 16, fontSize: 13, lineHeight: 1.5, whiteSpace: "pre-wrap", background: m.role === "user" ? `linear-gradient(135deg,${T.accent},#D4623C)` : T.card, color: m.role === "user" ? "#fff" : T.text, border: m.role === "user" ? "none" : `1px solid ${T.border}`, borderBottomRightRadius: m.role === "user" ? 4 : 16, borderBottomLeftRadius: m.role === "user" ? 16 : 4 }}>{m.text}</div></div>)}
-          {aiL && <div style={{ alignSelf: "flex-start", padding: "10px 14px", background: T.card, borderRadius: 14, border: `1px solid ${T.border}`, display: "flex", gap: 4 }}>{[0, 1, 2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: T.accent, animation: `dotP 1.4s ease ${i * 0.2}s infinite` }} />)}</div>}
-          <div ref={chatRef} /></div>
-        {quickM && aiMsgs.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: "4px 0" }}>{QQS.slice(0, 4).map((q, i) => <button key={i} onClick={() => askAI(q)} style={{ padding: "4px 8px", borderRadius: 10, background: T.card, border: `1px solid ${T.border}`, fontSize: 10, color: T.soft, cursor: "pointer" }}>{q}</button>)}</div>}
-        <div style={{ padding: "8px 0 14px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 6, background: T.bg }}><input value={aiIn} onChange={e => setAiIn(e.target.value)} onKeyDown={e => e.key === "Enter" && askAI()} placeholder="Pregunta..." style={{ flex: 1, padding: "11px 14px", borderRadius: 16, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, outline: "none" }} />
-          <button onClick={() => askAI()} disabled={aiL || !aiIn.trim()} style={{ width: 42, height: 42, borderRadius: 14, background: aiIn.trim() ? T.accent : T.border, border: "none", cursor: aiIn.trim() ? "pointer" : "default", color: "#fff", fontSize: 16 }}>↑</button></div>
-      </div>}
+      {view === "ai" && !sub && hp("use_ai") && <>
+        <div style={{ padding: "12px 16px 0", animation: "fadeUp 0.3s ease", display: "flex", flexDirection: "column", height: "calc(100dvh - 68px)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 34, height: 34, borderRadius: 12, background: "linear-gradient(135deg,#C4B5FD,#818CF8)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>🤖</div>
+              <div><p style={{ fontSize: 15, fontWeight: 900 }}>Asistente IA</p><p style={{ fontSize: 10, color: T.soft }}>{aiMsgs.length} msgs</p></div></div>
+            <div style={{ display: "flex", gap: 4 }}>
+              <button onClick={() => setQuickM(!quickM)} style={{ padding: "4px 7px", borderRadius: 8, background: quickM ? T.accent : T.card, color: quickM ? "#fff" : T.soft, border: `1px solid ${quickM ? T.accent : T.border}`, cursor: "pointer", fontSize: 10, fontWeight: 700 }}>⚡</button>
+              {aiMsgs.length > 0 && <button onClick={() => { setAiMsgs([]); data.clearAiMessages(); }} style={{ padding: "4px 7px", borderRadius: 8, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 10, color: T.soft }}>🗑️</button>}</div></div>
+          {/* Mensajes — scroll independiente, paddingBottom para que no queden detrás del input fijo */}
+          <div style={{ flex: 1, overflowY: "auto", paddingBottom: 150, display: "flex", flexDirection: "column", gap: 6 }}>
+            {aiMsgs.length === 0 && <div style={{ textAlign: "center", padding: "14px 6px" }}><p style={{ fontSize: 30, marginBottom: 6 }}>💬</p><p style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>Pregunta sobre {prof.name || "tu bebé"}</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "center" }}>{(quickM ? QQS : QQS.slice(0, 6)).map((q, i) => <button key={i} onClick={() => { if (quickM) askAI(q); else setAiIn(q); }} style={{ padding: "6px 10px", borderRadius: 12, background: T.card, border: `1px solid ${T.border}`, fontSize: 11, color: T.soft, cursor: "pointer" }}>{q}</button>)}</div></div>}
+            {aiMsgs.map((m, i) => <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "85%", animation: "fadeUp 0.15s ease" }}><div style={{ padding: "8px 12px", borderRadius: 16, fontSize: 13, lineHeight: 1.5, whiteSpace: "pre-wrap", background: m.role === "user" ? `linear-gradient(135deg,${T.accent},#D4623C)` : T.card, color: m.role === "user" ? "#fff" : T.text, border: m.role === "user" ? "none" : `1px solid ${T.border}`, borderBottomRightRadius: m.role === "user" ? 4 : 16, borderBottomLeftRadius: m.role === "user" ? 16 : 4 }}>{m.text}</div></div>)}
+            {aiL && <div style={{ alignSelf: "flex-start", padding: "10px 14px", background: T.card, borderRadius: 14, border: `1px solid ${T.border}`, display: "flex", gap: 4 }}>{[0, 1, 2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: T.accent, animation: `dotP 1.4s ease ${i * 0.2}s infinite` }} />)}</div>}
+            <div ref={chatRef} /></div>
+        </div>
+        {/* Input fijo justo encima del nav flotante (nav: bottom 16px + ~62px alto = 78px) */}
+        <div style={{ position: "fixed", bottom: 84, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, padding: "0 16px", zIndex: 50 }}>
+          {quickM && aiMsgs.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 4, paddingBottom: 4 }}>{QQS.slice(0, 4).map((q, i) => <button key={i} onClick={() => askAI(q)} style={{ padding: "4px 8px", borderRadius: 10, background: T.card, border: `1px solid ${T.border}`, fontSize: 10, color: T.soft, cursor: "pointer" }}>{q}</button>)}</div>}
+          <div style={{ padding: "8px 0 10px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 6, background: T.bg }}>
+            <input value={aiIn} onChange={e => setAiIn(e.target.value)} onKeyDown={e => e.key === "Enter" && askAI()} placeholder="Pregunta..." style={{ flex: 1, padding: "11px 14px", borderRadius: 16, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, outline: "none" }} />
+            <button onClick={() => askAI()} disabled={aiL || !aiIn.trim()} style={{ width: 42, height: 42, borderRadius: 14, background: aiIn.trim() ? T.accent : T.border, border: "none", cursor: aiIn.trim() ? "pointer" : "default", color: "#fff", fontSize: 16 }}>↑</button>
+          </div>
+        </div>
+      </>}
 
       {/* QUESTIONS */}
       {view === "questions" && !sub && <div style={{ padding: "14px 16px 100px", animation: "fadeUp 0.3s ease" }}>
