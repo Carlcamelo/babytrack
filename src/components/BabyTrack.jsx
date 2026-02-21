@@ -553,6 +553,7 @@ Hitos alcanzados: [${msDone.map(m => milestones.find(x => x.id === m.id)?.l).fil
     ];
 
     try {
+      alert("Key: " + (import.meta.env.VITE_GEMINI_KEY || "UNDEFINED").substring(0, 10));
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${import.meta.env.VITE_GEMINI_KEY}`,
         { method: "POST", headers: { "Content-Type": "application/json" },
