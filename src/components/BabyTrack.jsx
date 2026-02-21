@@ -559,9 +559,19 @@ Hitos alcanzados: [${msDone.map(m => milestones.find(x => x.id === m.id)?.l).fil
           body: JSON.stringify({ contents, systemInstruction: { parts: [{ text: systemPrompt }] } }) }
       );
       const data2 = await res.json();
-      const aiText = data2.candidates?.[0]?.content?.parts?.[0]?.text || "Error al obtener respuesta.";
-      setAiMsgs(p => [...p, { role: "assistant", text: aiText }]); data.addAiMessage("assistant", aiText);
-    } catch { setAiMsgs(p => [...p, { role: "assistant", text: "⚠️ Sin conexión." }]); }
+      if (!res.ok || data2.error) {
+        console.log("[Gemini error]", data2.error || data2);
+        const errMsg = data2.error?.message || `HTTP ${res.status}`;
+        setAiMsgs(p => [...p, { role: "assistant", text: `⚠️ Error Gemini: ${errMsg}` }]);
+      } else {
+        const aiText = data2.candidates?.[0]?.content?.parts?.[0]?.text || "Sin respuesta.";
+        setAiMsgs(p => [...p, { role: "assistant", text: aiText }]);
+        data.addAiMessage("assistant", aiText);
+      }
+    } catch (e) {
+      console.log("[Gemini fetch error]", e);
+      setAiMsgs(p => [...p, { role: "assistant", text: "⚠️ Sin conexión." }]);
+    }
     setAiL(false);
   };
 
