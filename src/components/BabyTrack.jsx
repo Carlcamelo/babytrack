@@ -322,18 +322,54 @@ export default function BabyTrack({ auth, data }) {
   const myTasks = pendingTasks.filter(t => !t.assignee || t.assignee === cu.name);
   const doneTasks = tasks.filter(t => t.done);
 
-  // SMART ALERTS
+  // SMART ALERTS — time-aware, data-aware
   const alerts = [];
-  // Feeding alerts
-  if (lF) { try { const hSince = Math.floor((Date.now() - new Date(lF.ts)) / 36e5); if (hSince > 4) alerts.push({ t: "warn", m: `🍼 ${hSince}h sin comer` }); } catch {} }
-  if (tF.length >= 2 && tOz < goals.ozMin * 0.4 && hr > 14) alerts.push({ t: "warn", m: `🍼 Solo ${tOz}oz — meta: ${goals.ozLabel}` });
-  // Sleep alerts
-  if (hr > 12 && tSlH < 1 && !slpA) alerts.push({ t: "warn", m: `😴 Sin siestas hoy — meta: ${goals.naps}` });
-  if (hr > 18 && tSlH < sleepGoalH * 0.3) alerts.push({ t: "warn", m: `😴 Solo ${tSlH}h de ${sleepGoalH}h meta` });
-  // Diaper alerts
-  if (hr > 14 && tWet < 3) alerts.push({ t: "warn", m: `🧷 Solo ${tWet} pipí — meta: ${goals.wetLabel}/día` });
-  if (hr > 18 && tWet < goals.wetMin) alerts.push({ t: "danger", m: `🧷 ${tWet} mojados — puede indicar deshidratación` });
-  // Temp
+  const isNewProfile = ent.length < 3;          // perfil recién creado, sin historial
+  const hasFedToday  = tF.length > 0;           // registró al menos 1 toma hoy
+  const hasDiaperToday = tD > 0;                // registró al menos 1 pañal hoy
+  const hasSleepToday  = tSl.length > 0 || !!slpA; // registró o hay siesta activa
+  const activeHours = Math.max(0, hr - 7);      // horas transcurridas desde las 7am
+
+  if (!isNewProfile) {
+    // 1. Tiempo sin comer — activo solo si hay historial de tomas
+    //    (lF apunta a la última toma de TODA la historia, no solo hoy)
+    if (lF) {
+      try {
+        const hSince = (Date.now() - new Date(lF.ts)) / 36e5;
+        if (hSince >= 4) alerts.push({ t: "warn", m: `🍼 ${Math.floor(hSince)}h sin comer` });
+      } catch {}
+    }
+
+    // 2. Oz bajas — solo si: ya registró tomas hoy Y pasó la tarde (hr > 14)
+    if (hasFedToday && hr > 14 && tOz < goals.ozMin * 0.4) {
+      alerts.push({ t: "warn", m: `🍼 Solo ${tOz}oz — meta: ${goals.ozLabel}` });
+    }
+
+    // 3. Sin siestas — solo si: registró algo de sueño hoy (o lo intenta) Y pasó el mediodía
+    if (hasSleepToday && hr > 13 && tSlH < 1 && !slpA) {
+      alerts.push({ t: "warn", m: `😴 Sin siestas hoy — meta: ${goals.naps}` });
+    }
+
+    // 4. Sueño muy bajo — solo si: hay datos de sueño hoy Y es tarde
+    if (hasSleepToday && hr > 18 && tSlH < sleepGoalH * 0.3) {
+      alerts.push({ t: "warn", m: `😴 Solo ${tSlH}h de ${sleepGoalH}h meta` });
+    }
+
+    // 5. Pocos pañales mojados — solo si: registró pañales hoy Y es tarde
+    //    Proporcional: esperamos goals.wetMin en 16h de día → 1 cada ~2.5h
+    const expectedWetByNow = Math.floor(activeHours / 2.5);
+    if (hasDiaperToday && hr > 14 && tWet < Math.min(3, Math.max(1, expectedWetByNow * 0.5))) {
+      alerts.push({ t: "warn", m: `🧷 Solo ${tWet} pipí — meta: ${goals.wetLabel}/día` });
+    }
+
+    // 6. Pañales peligrosamente bajos — posible deshidratación
+    //    Solo si: registró pañales hoy Y es noche
+    if (hasDiaperToday && hr > 18 && tWet < Math.ceil(goals.wetMin * 0.4)) {
+      alerts.push({ t: "danger", m: `🧷 ${tWet} mojados — puede indicar deshidratación` });
+    }
+  }
+
+  // Temperatura y tareas vencidas: siempre aplican sin importar hora ni historial
   if (lT?.temp >= 38) alerts.push({ t: "danger", m: `🌡️ Temp: ${lT.temp}°C — fiebre` });
   if (overdueTasks.length > 0) alerts.push({ t: "warn", m: `📌 ${overdueTasks.length} tarea(s) vencida(s)` });
 
