@@ -1,10 +1,18 @@
 import { useState } from 'react';
 
+const FAMILY_ROLES = [
+  { id: 'papa',   l: 'Papá',   e: '👨' },
+  { id: 'mama',   l: 'Mamá',   e: '👩' },
+  { id: 'abuela', l: 'Abuela', e: '👵' },
+  { id: 'abuelo', l: 'Abuelo', e: '👴' },
+];
+
 export default function AuthScreen({ onAuth, T }) {
   const [mode, setMode] = useState('login'); // login | signup | invitation
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
   const [name, setName] = useState('');
+  const [familyRole, setFamilyRole] = useState(null);
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
@@ -25,7 +33,7 @@ export default function AuthScreen({ onAuth, T }) {
 
   const switchMode = newMode => {
     setMode(newMode); setErr('');
-    setEmail(''); setPass(''); setName('');
+    setEmail(''); setPass(''); setName(''); setFamilyRole(null);
     if (newMode !== 'signup') { setShowCode(false); setInviteCode(''); }
   };
 
@@ -34,7 +42,7 @@ export default function AuthScreen({ onAuth, T }) {
     try {
       if (mode === 'signup') {
         if (inviteCode.trim()) localStorage.setItem('pendingInviteCode', inviteCode.trim().toUpperCase());
-        const { error } = await onAuth.signUp(email, pass, name);
+        const { error } = await onAuth.signUp(email, pass, name, familyRole);
         if (error) { localStorage.removeItem('pendingInviteCode'); setErr(error.message); }
         else setErr(inviteCode.trim() ? '¡Cuenta creada! Al confirmar tu correo te unirás a la familia 👨‍👩‍👧' : '¡Cuenta creada! Revisa tu correo para confirmar 📧');
       } else {
@@ -97,6 +105,34 @@ export default function AuthScreen({ onAuth, T }) {
           {mode === 'signup' && <>
             <input value={name} onChange={e => setName(e.target.value)}
               placeholder="¿Cómo te llamas?" style={glInput} />
+
+            {/* Family role selector */}
+            <div>
+              <p style={{ fontSize: 12, fontWeight: 700, color: T.soft, textAlign: 'center', margin: '0 0 8px', letterSpacing: 0.3 }}>
+                ¿CUÁL ES TU ROL?
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {FAMILY_ROLES.map(r => (
+                  <button key={r.id} onClick={() => setFamilyRole(r.id)} type="button" style={{
+                    padding: '11px 8px', borderRadius: 16, cursor: 'pointer',
+                    background: familyRole === r.id ? 'rgba(227,111,71,0.15)' : 'rgba(255,255,255,0.55)',
+                    backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+                    border: familyRole === r.id ? '1.5px solid rgba(227,111,71,0.48)' : '1px solid rgba(255,255,255,0.78)',
+                    boxShadow: familyRole === r.id
+                      ? '0 2px 12px rgba(227,111,71,0.18), inset 0 1px 0 rgba(255,255,255,0.8)'
+                      : 'inset 0 1px 0 rgba(255,255,255,0.9)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                    fontSize: 14, fontWeight: familyRole === r.id ? 800 : 600,
+                    color: familyRole === r.id ? T.accent : T.text,
+                    transition: 'all 0.2s', fontFamily: "'Nunito',sans-serif",
+                  }}>
+                    <span style={{ fontSize: 20 }}>{r.e}</span>
+                    {r.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <input type="email" value={email} onChange={e => setEmail(e.target.value)}
               placeholder="Tu correo electrónico" style={glInput} />
             <input type="password" value={pass} onChange={e => setPass(e.target.value)}

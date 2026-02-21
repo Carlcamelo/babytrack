@@ -37,6 +37,16 @@ export function useAuth() {
       .select('*')
       .eq('id', userId)
       .single();
+    // Si el perfil no tiene family_role pero sí está en los metadatos de auth
+    // (usuario invitado que lo eligió en signup), lo guardamos ahora
+    if (data && !data.family_role) {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const metaRole = authUser?.user_metadata?.family_role;
+      if (metaRole) {
+        await supabase.from('profiles').update({ family_role: metaRole }).eq('id', userId);
+        data.family_role = metaRole;
+      }
+    }
     setProfile(data);
     setLoading(false);
   };
@@ -51,11 +61,11 @@ export function useAuth() {
     return { success: true };
   };
 
-  const signUp = async (email, password, name) => {
+  const signUp = async (email, password, name, familyRole) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name } }
+      options: { data: { name, family_role: familyRole || 'papa' } }
     });
     return { data, error };
   };
