@@ -112,11 +112,18 @@ const QQS = ["¿Va bien hoy?", "¿Cuántas oz al día?", "¿Pañales normales?",
 const calcAge = (bd) => {
   if (!bd) return null;
   try {
-    const b = new Date(bd); const now = new Date();
-    const months = (now.getFullYear() - b.getFullYear()) * 12 + (now.getMonth() - b.getMonth());
-    const days = now.getDate() - b.getDate();
-    const m = days < 0 ? months - 1 : months;
-    return { months: Math.max(0, m), days: Math.max(0, Math.floor((now - b) / 864e5)) };
+    // T12:00:00 evita que la fecha se interprete como UTC medianoche
+    // y quede un día antes en zonas UTC-X (ej. Bogotá UTC-5)
+    const b = new Date(bd + 'T12:00:00');
+    const now = new Date();
+    let months = (now.getFullYear() - b.getFullYear()) * 12 + (now.getMonth() - b.getMonth());
+    let days = now.getDate() - b.getDate();
+    if (days < 0) {
+      months--;
+      // Días del mes anterior al mes actual
+      days += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+    }
+    return { months: Math.max(0, months), days: Math.max(0, days) };
   } catch { return null; }
 };
 const ageToRange = (bd) => {
@@ -129,7 +136,7 @@ const ageToRange = (bd) => {
 const fmtAge = (bd) => {
   const a = calcAge(bd); if (!a) return "";
   if (a.months === 0) return `${a.days} día${a.days !== 1 ? "s" : ""}`;
-  if (a.months < 12) return `${a.months} mes${a.months !== 1 ? "es" : ""}${a.days > 0 ? ` y ${a.days % 30} días` : ""}`;
+  if (a.months < 12) return `${a.months} mes${a.months !== 1 ? "es" : ""}${a.days > 0 ? ` y ${a.days} día${a.days !== 1 ? "s" : ""}` : ""}`;
   const y = Math.floor(a.months / 12); const rm = a.months % 12;
   return `${y} año${y > 1 ? "s" : ""}${rm ? ` y ${rm} mes${rm > 1 ? "es" : ""}` : ""}`;
 };
