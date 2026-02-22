@@ -504,6 +504,8 @@ export default function BabyTrack({ auth, data }) {
     const msg = ov || aiIn; if (!msg.trim()) return; if (!ov) setAiIn("");
     setAiMsgs(p => [...p, { role: "user", text: msg }]); setAiL(true); data.addAiMessage("user", msg);
 
+    console.log("DEBUG PROF:", JSON.stringify(prof));
+
     const systemPrompt = `Eres un asistente pediátrico cálido y confiable para familias con bebés de 0-12 meses.
 
 BEBÉ: ${prof.name || "el bebé"}, ${prof.gender === "female" ? "niña" : "niño"}, nacido el ${prof.birthDate || "fecha no registrada"}, edad actual: ${prof.birthDate ? fmtAge(prof.birthDate) : prof.ageRange}.
