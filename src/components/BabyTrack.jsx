@@ -1225,27 +1225,83 @@ html,body{background:${T.bg};margin:0;padding:0;min-height:100%}`;
 
       {/* AI */}
       {view === "ai" && !sub && hp("use_ai") && <>
-        <div style={{ padding: "12px 16px 0", animation: "fadeUp 0.3s ease", display: "flex", flexDirection: "column", height: "calc(100dvh - 68px)" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 34, height: 34, borderRadius: 12, background: "linear-gradient(135deg,#C4B5FD,#818CF8)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>🤖</div>
-              <div><p style={{ fontSize: 15, fontWeight: 900 }}>Asistente IA</p><p style={{ fontSize: 10, color: T.soft }}>{aiMsgs.length} msgs</p></div></div>
-            <div style={{ display: "flex", gap: 4 }}>
-              <button onClick={() => setQuickM(!quickM)} style={{ padding: "4px 7px", borderRadius: 8, background: quickM ? T.accent : T.card, color: quickM ? "#fff" : T.soft, border: `1px solid ${quickM ? T.accent : T.border}`, cursor: "pointer", fontSize: 10, fontWeight: 700 }}>⚡</button>
-              {aiMsgs.length > 0 && <button onClick={() => { setAiMsgs([]); data.clearAiMessages(); }} style={{ padding: "4px 7px", borderRadius: 8, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 10, color: T.soft }}>🗑️</button>}</div></div>
-          {/* Mensajes — scroll independiente, paddingBottom para que no queden detrás del input fijo */}
-          <div style={{ flex: 1, overflowY: "auto", paddingBottom: 160, display: "flex", flexDirection: "column", gap: 6 }}>
-            {aiMsgs.length === 0 && <div style={{ textAlign: "center", padding: "14px 6px" }}><p style={{ fontSize: 30, marginBottom: 6 }}>💬</p><p style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>Pregunta sobre {prof.name || "tu bebé"}</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "center" }}>{(quickM ? QQS : QQS.slice(0, 6)).map((q, i) => <button key={i} onClick={() => { if (quickM) askAI(q); else setAiIn(q); }} style={{ padding: "6px 10px", borderRadius: 12, background: T.card, border: `1px solid ${T.border}`, fontSize: 11, color: T.soft, cursor: "pointer" }}>{q}</button>)}</div></div>}
-            {aiMsgs.map((m, i) => <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "85%", animation: "fadeUp 0.15s ease" }}><div style={{ padding: "8px 12px", borderRadius: 16, fontSize: 13, lineHeight: 1.5, whiteSpace: "pre-wrap", background: m.role === "user" ? `linear-gradient(135deg,${T.accent},#D4623C)` : T.card, color: m.role === "user" ? "#fff" : T.text, border: m.role === "user" ? "none" : `1px solid ${T.border}`, borderBottomRightRadius: m.role === "user" ? 4 : 16, borderBottomLeftRadius: m.role === "user" ? 16 : 4 }}>{m.role === "user" ? m.text : cleanMarkdown(m.text)}</div></div>)}
-            {aiL && <div style={{ alignSelf: "flex-start", padding: "10px 14px", background: T.card, borderRadius: 14, border: `1px solid ${T.border}`, display: "flex", gap: 4 }}>{[0, 1, 2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: T.accent, animation: `dotP 1.4s ease ${i * 0.2}s infinite` }} />)}</div>}
-            <div ref={chatRef} /></div>
+        {/* Header fijo */}
+        <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, zIndex: 60, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", background: dark ? "rgba(12,12,18,0.82)" : "rgba(250,250,247,0.82)", borderBottom: `1px solid ${T.border}` }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 13, background: "linear-gradient(135deg,#C4B5FD,#818CF8)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>🤖</div>
+              <div><p style={{ fontSize: 16, fontWeight: 900, lineHeight: 1.1 }}>Asistente IA</p><p style={{ fontSize: 11, color: T.soft }}>Pediatría 0-12 meses</p></div>
+            </div>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <button onClick={() => setQuickM(!quickM)} style={{ width: 34, height: 34, borderRadius: 10, background: quickM ? T.accentL : (dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)"), color: quickM ? T.accent : T.soft, border: `1px solid ${quickM ? T.accent+"55" : T.border}`, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>⚡</button>
+              {aiMsgs.length > 0 && <button onClick={() => { setAiMsgs([]); data.clearAiMessages(); }} style={{ width: 34, height: 34, borderRadius: 10, background: dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)", border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>🗑️</button>}
+            </div>
+          </div>
         </div>
-        {/* Input fijo justo encima del nav flotante (nav: bottom 16px + ~62px alto = 78px) */}
-        <div style={{ position: "fixed", bottom: 88, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, padding: "0 16px", zIndex: 50 }}>
-          {quickM && aiMsgs.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 4, paddingBottom: 4 }}>{QQS.slice(0, 4).map((q, i) => <button key={i} onClick={() => askAI(q)} style={{ padding: "4px 8px", borderRadius: 10, background: T.card, border: `1px solid ${T.border}`, fontSize: 10, color: T.soft, cursor: "pointer" }}>{q}</button>)}</div>}
-          <div style={{ padding: "8px 0 10px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 6, background: T.bg }}>
-            <input value={aiIn} onChange={e => setAiIn(e.target.value)} onKeyDown={e => e.key === "Enter" && askAI()} placeholder="Pregunta..." style={{ flex: 1, padding: "11px 14px", borderRadius: 16, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, outline: "none" }} />
-            <button onClick={() => askAI()} disabled={aiL || !aiIn.trim()} style={{ width: 42, height: 42, borderRadius: 14, background: aiIn.trim() ? T.accent : T.border, border: "none", cursor: aiIn.trim() ? "pointer" : "default", color: "#fff", fontSize: 16 }}>↑</button>
+
+        {/* Área de mensajes */}
+        <div style={{ paddingTop: 72, paddingBottom: 148, paddingLeft: 16, paddingRight: 16, display: "flex", flexDirection: "column", gap: 8, minHeight: "100dvh", overflowY: "auto" }}>
+          {/* Estado vacío */}
+          {aiMsgs.length === 0 && (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, paddingTop: 40, paddingBottom: 20 }}>
+              <div style={{ fontSize: 48, marginBottom: 10 }}>💬</div>
+              <p style={{ fontSize: 16, fontWeight: 800, marginBottom: 4, color: T.text }}>Hola, soy tu asistente</p>
+              <p style={{ fontSize: 13, color: T.soft, marginBottom: 20, textAlign: "center" }}>Pregúntame sobre {prof.name || "tu bebé"}</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
+                {QQS.slice(0, 6).map((q, i) => (
+                  <button key={i} onClick={() => setAiIn(q)} style={{ padding: "8px 14px", borderRadius: 20, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.72)", border: `1px solid ${T.border}`, fontSize: 12, color: T.text, cursor: "pointer", fontWeight: 600 }}>{q}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Burbujas */}
+          {aiMsgs.map((m, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", animation: "fadeUp 0.18s ease" }}>
+              <div style={{
+                maxWidth: "78%", padding: "12px 16px", fontSize: 14, lineHeight: 1.5, whiteSpace: "pre-wrap",
+                borderRadius: m.role === "user" ? "20px 20px 4px 20px" : "20px 20px 20px 4px",
+                background: m.role === "user"
+                  ? `linear-gradient(135deg,${T.accent},#D4623C)`
+                  : dark ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.78)",
+                backdropFilter: m.role === "user" ? "none" : "blur(16px)",
+                WebkitBackdropFilter: m.role === "user" ? "none" : "blur(16px)",
+                border: m.role === "user" ? "none" : `1px solid ${dark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.85)"}`,
+                boxShadow: m.role === "user"
+                  ? "0 4px 16px rgba(227,111,71,0.28)"
+                  : dark ? "0 2px 12px rgba(0,0,0,0.3)" : "0 2px 12px rgba(0,0,0,0.07)",
+                color: m.role === "user" ? "#fff" : T.text,
+              }}>
+                {m.role === "user" ? m.text : cleanMarkdown(m.text)}
+              </div>
+            </div>
+          ))}
+
+          {/* Loading dots */}
+          {aiL && (
+            <div style={{ display: "flex", justifyContent: "flex-start", animation: "fadeUp 0.18s ease" }}>
+              <div style={{ padding: "14px 18px", borderRadius: "20px 20px 20px 4px", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", background: dark ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.78)", border: `1px solid ${dark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.85)"}`, boxShadow: dark ? "0 2px 12px rgba(0,0,0,0.3)" : "0 2px 12px rgba(0,0,0,0.07)", display: "flex", gap: 5, alignItems: "center" }}>
+                {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: T.accent, animation: `dotP 1.4s ease ${i * 0.2}s infinite` }} />)}
+              </div>
+            </div>
+          )}
+          <div ref={chatRef} />
+        </div>
+
+        {/* Input fijo — justo encima del nav */}
+        <div style={{ position: "fixed", bottom: 68, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, zIndex: 55, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", background: dark ? "rgba(12,12,18,0.82)" : "rgba(250,250,247,0.82)", borderTop: `1px solid ${T.border}`, padding: "8px 16px 10px" }}>
+          {/* Quick chips scrolleables */}
+          {quickM && (
+            <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 8, scrollbarWidth: "none", msOverflowStyle: "none" }}>
+              {QQS.map((q, i) => (
+                <button key={i} onClick={() => askAI(q)} style={{ flexShrink: 0, padding: "5px 12px", borderRadius: 20, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.72)", border: `1px solid ${T.border}`, fontSize: 11, color: T.text, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>{q}</button>
+              ))}
+            </div>
+          )}
+          {/* Input row */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: dark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.72)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderRadius: 28, border: `1px solid ${dark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.85)"}`, padding: "6px 6px 6px 16px" }}>
+            <input value={aiIn} onChange={e => setAiIn(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && askAI()} placeholder="Escribe tu pregunta..." style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 14, color: T.text, minHeight: 32 }} />
+            <button onClick={() => askAI()} disabled={aiL || !aiIn.trim()} style={{ width: 36, height: 36, borderRadius: "50%", background: aiIn.trim() && !aiL ? `linear-gradient(135deg,${T.accent},#D4623C)` : T.border, border: "none", cursor: aiIn.trim() && !aiL ? "pointer" : "default", color: "#fff", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>↑</button>
           </div>
         </div>
       </>}
