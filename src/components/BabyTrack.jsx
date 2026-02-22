@@ -1226,8 +1226,8 @@ html,body{background:${T.bg};margin:0;padding:0;min-height:100%}`;
       {/* AI */}
       {view === "ai" && !sub && hp("use_ai") && <>
         {/* Header fijo */}
-        <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, zIndex: 60, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", background: dark ? "rgba(12,12,18,0.82)" : "rgba(250,250,247,0.82)", borderBottom: `1px solid ${T.border}` }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px" }}>
+        <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, zIndex: 60, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", background: dark ? "rgba(12,12,18,0.92)" : "rgba(250,250,247,0.92)", borderBottom: `1px solid ${dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)"}` }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px 8px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ width: 38, height: 38, borderRadius: 13, background: "linear-gradient(135deg,#C4B5FD,#818CF8)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>🤖</div>
               <div><p style={{ fontSize: 16, fontWeight: 900, lineHeight: 1.1 }}>Asistente IA</p><p style={{ fontSize: 11, color: T.soft }}>Pediatría 0-12 meses</p></div>
@@ -1237,10 +1237,14 @@ html,body{background:${T.bg};margin:0;padding:0;min-height:100%}`;
               {aiMsgs.length > 0 && <button onClick={() => { setAiMsgs([]); data.clearAiMessages(); }} style={{ width: 34, height: 34, borderRadius: 10, background: dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)", border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>🗑️</button>}
             </div>
           </div>
+          {/* Disclaimer médico */}
+          <div style={{ margin: "0 16px 8px", padding: "4px 10px", borderRadius: 8, background: dark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", textAlign: "center" }}>
+            <p style={{ fontSize: 10, color: T.soft }}>ℹ️ Orientación general. Siempre confirma con tu pediatra.</p>
+          </div>
         </div>
 
         {/* Área de mensajes */}
-        <div style={{ paddingTop: 72, paddingBottom: 180, paddingLeft: 16, paddingRight: 16, display: "flex", flexDirection: "column", gap: 8, minHeight: "100dvh", overflowY: "auto" }}>
+        <div style={{ paddingTop: 100, paddingBottom: 200, paddingLeft: 16, paddingRight: 16, display: "flex", flexDirection: "column", gap: 8, minHeight: "100dvh", overflowY: "auto" }}>
           {/* Estado vacío */}
           {aiMsgs.length === 0 && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, paddingTop: 40, paddingBottom: 20 }}>
@@ -1288,21 +1292,44 @@ html,body{background:${T.bg};margin:0;padding:0;min-height:100%}`;
           <div ref={chatRef} />
         </div>
 
-        {/* Input fijo — justo encima del nav */}
-        <div style={{ position: "fixed", bottom: 85, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, zIndex: 55, background: dark ? "rgba(12,12,18,0.96)" : "rgba(250,250,247,0.96)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", borderTop: `1px solid ${dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)"}`, padding: "8px 16px 10px" }}>
+        {/* Contenedor inferior unificado: input + nav — una sola pieza glass */}
+        <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, zIndex: 55, backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", background: dark ? "rgba(12,12,18,0.96)" : "rgba(250,250,247,0.96)", borderTop: `1px solid ${dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)"}`, padding: "8px 16px 20px" }}>
           {/* Quick chips scrolleables */}
           {quickM && (
             <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 8, scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
               {QQS.map((q, i) => (
-                <button key={i} onClick={() => askAI(q)} style={{ flexShrink: 0, padding: "6px 12px", borderRadius: 20, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", background: dark ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.85)", border: `1px solid ${dark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)"}`, fontSize: 11, color: T.text, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>{q}</button>
+                <button key={i} onClick={() => askAI(q)} style={{ flexShrink: 0, padding: "6px 12px", borderRadius: 20, background: dark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.06)", border: "none", fontSize: 11, color: T.text, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>{q}</button>
               ))}
             </div>
           )}
           {/* Input row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: dark ? "rgba(255,255,255,0.08)" : "#FFFFFF", borderRadius: 28, border: `1.5px solid ${dark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.10)"}`, padding: "6px 6px 6px 16px", boxShadow: dark ? "0 2px 12px rgba(0,0,0,0.4)" : "0 2px 12px rgba(0,0,0,0.08)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: dark ? "rgba(255,255,255,0.08)" : "#FFFFFF", borderRadius: 24, border: `1px solid ${dark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}`, padding: "6px 6px 6px 16px", boxShadow: dark ? "0 2px 10px rgba(0,0,0,0.35)" : "0 2px 10px rgba(0,0,0,0.07)", marginBottom: 8 }}>
             <input value={aiIn} onChange={e => setAiIn(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && askAI()} placeholder="Escribe tu pregunta..." style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 14, color: T.text, minHeight: 32 }} />
             <button onClick={() => askAI()} disabled={aiL || !aiIn.trim()} style={{ width: 36, height: 36, borderRadius: "50%", background: aiIn.trim() && !aiL ? `linear-gradient(135deg,${T.accent},#D4623C)` : T.border, border: "none", cursor: aiIn.trim() && !aiL ? "pointer" : "default", color: "#fff", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>↑</button>
           </div>
+          {/* Nav inline — misma pieza */}
+          {(() => {
+            const NAV = [
+              { id: "home",      i: "🏠", b: 0,                                                           show: true },
+              { id: "history",   i: "📊", b: 0,                                                           show: hp("view_history") },
+              { id: "ai",        i: "🤖", b: 0,                                                           show: hp("use_ai") },
+              { id: "tasks",     i: "📌", b: pendingTasks.length,                                         show: true },
+              { id: "questions", i: "📋", b: qs.filter(q => q.status === "pending").length,              show: hp("view_questions") || hp("ask_questions") },
+            ].filter(x => x.show);
+            const activeI = NAV.findIndex(x => x.id === view);
+            const n = NAV.length;
+            return (
+              <div style={{ display: "flex", alignItems: "center", position: "relative" }}>
+                {activeI >= 0 && <div style={{ position: "absolute", width: `calc(${100/n}% - 6px)`, height: 44, borderRadius: 16, background: dark ? "rgba(227,111,71,0.18)" : "rgba(227,111,71,0.12)", border: dark ? "1px solid rgba(227,111,71,0.28)" : "1px solid rgba(227,111,71,0.20)", left: `calc(${(activeI/n)*100}% + 3px)`, top: "50%", transform: "translateY(-50%)", transition: "left 0.35s cubic-bezier(0.34,1.56,0.64,1)", pointerEvents: "none" }} />}
+                {NAV.map(x => (
+                  <button key={x.id} onClick={() => { setView(x.id); setSub(null); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 4px", position: "relative", zIndex: 1 }}>
+                    {x.b > 0 && <div style={{ position: "absolute", top: 4, right: "calc(50% - 18px)", minWidth: 14, height: 14, borderRadius: 7, background: T.accent, color: "#fff", fontSize: 8, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>{x.b}</div>}
+                    <span style={{ fontSize: 24, display: "block", transition: "transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s", transform: view === x.id ? "scale(1.2)" : "scale(0.95)", opacity: view === x.id ? 1 : 0.42 }}>{x.i}</span>
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       </>}
 
