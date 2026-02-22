@@ -500,6 +500,12 @@ export default function BabyTrack({ auth, data }) {
     const b = new Blob([h + rows], { type: "text/csv" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `babytrack-${prof.name || "data"}.csv`; a.click();
   };
 
+  const cleanMarkdown = t => t
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/\*(.+?)\*/g, "$1")
+    .replace(/^[\*\-] /gm, "• ")
+    .replace(/^#{1,3} /gm, "");
+
   const askAI = async ov => {
     const msg = ov || aiIn; if (!msg.trim()) return; if (!ov) setAiIn("");
     setAiMsgs(p => [...p, { role: "user", text: msg }]); setAiL(true); data.addAiMessage("user", msg);
@@ -517,13 +523,14 @@ DATOS DE HOY:
 - Score del día: ${dailyScore}/100
 
 REGLAS:
-1. Respuestas CORTAS: máximo 80 palabras. Directo al punto.
-2. Si preguntan algo médico preocupante, di "consulta al pediatra" sin dramatizar.
-3. Basa tus respuestas en guías AAP/OMS pero NO cites fuentes explícitamente a menos que te pregunten.
-4. Usa los datos del día para contextualizar tu respuesta.
-5. Tono: cálido, tranquilo, como un pediatra de confianza. Apto para abuelos y papás.
-6. Responde en español.
-7. No inventes datos ni porcentajes.`;
+1. Respuestas CORTAS: máximo 60 palabras. Directo al punto.
+2. NUNCA uses markdown, negritas, asteriscos ni listas con *. Solo texto plano en párrafo.
+3. Si preguntan algo médico preocupante, di "consulta al pediatra" sin dramatizar.
+4. Basa tus respuestas en guías AAP/OMS pero NO cites fuentes explícitamente a menos que te pregunten.
+5. Usa los datos del día para contextualizar tu respuesta.
+6. Tono: cálido, tranquilo, como un pediatra de confianza. Apto para abuelos y papás.
+7. Responde en español.
+8. No inventes datos ni porcentajes.`;
 
     const contents = [
       ...aiMsgs.slice(-20).map(m => ({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.text }] })),
@@ -1226,15 +1233,15 @@ html,body{background:${T.bg};margin:0;padding:0;min-height:100%}`;
               <button onClick={() => setQuickM(!quickM)} style={{ padding: "4px 7px", borderRadius: 8, background: quickM ? T.accent : T.card, color: quickM ? "#fff" : T.soft, border: `1px solid ${quickM ? T.accent : T.border}`, cursor: "pointer", fontSize: 10, fontWeight: 700 }}>⚡</button>
               {aiMsgs.length > 0 && <button onClick={() => { setAiMsgs([]); data.clearAiMessages(); }} style={{ padding: "4px 7px", borderRadius: 8, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 10, color: T.soft }}>🗑️</button>}</div></div>
           {/* Mensajes — scroll independiente, paddingBottom para que no queden detrás del input fijo */}
-          <div style={{ flex: 1, overflowY: "auto", paddingBottom: 150, display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ flex: 1, overflowY: "auto", paddingBottom: 160, display: "flex", flexDirection: "column", gap: 6 }}>
             {aiMsgs.length === 0 && <div style={{ textAlign: "center", padding: "14px 6px" }}><p style={{ fontSize: 30, marginBottom: 6 }}>💬</p><p style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>Pregunta sobre {prof.name || "tu bebé"}</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "center" }}>{(quickM ? QQS : QQS.slice(0, 6)).map((q, i) => <button key={i} onClick={() => { if (quickM) askAI(q); else setAiIn(q); }} style={{ padding: "6px 10px", borderRadius: 12, background: T.card, border: `1px solid ${T.border}`, fontSize: 11, color: T.soft, cursor: "pointer" }}>{q}</button>)}</div></div>}
-            {aiMsgs.map((m, i) => <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "85%", animation: "fadeUp 0.15s ease" }}><div style={{ padding: "8px 12px", borderRadius: 16, fontSize: 13, lineHeight: 1.5, whiteSpace: "pre-wrap", background: m.role === "user" ? `linear-gradient(135deg,${T.accent},#D4623C)` : T.card, color: m.role === "user" ? "#fff" : T.text, border: m.role === "user" ? "none" : `1px solid ${T.border}`, borderBottomRightRadius: m.role === "user" ? 4 : 16, borderBottomLeftRadius: m.role === "user" ? 16 : 4 }}>{m.text}</div></div>)}
+            {aiMsgs.map((m, i) => <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "85%", animation: "fadeUp 0.15s ease" }}><div style={{ padding: "8px 12px", borderRadius: 16, fontSize: 13, lineHeight: 1.5, whiteSpace: "pre-wrap", background: m.role === "user" ? `linear-gradient(135deg,${T.accent},#D4623C)` : T.card, color: m.role === "user" ? "#fff" : T.text, border: m.role === "user" ? "none" : `1px solid ${T.border}`, borderBottomRightRadius: m.role === "user" ? 4 : 16, borderBottomLeftRadius: m.role === "user" ? 16 : 4 }}>{m.role === "user" ? m.text : cleanMarkdown(m.text)}</div></div>)}
             {aiL && <div style={{ alignSelf: "flex-start", padding: "10px 14px", background: T.card, borderRadius: 14, border: `1px solid ${T.border}`, display: "flex", gap: 4 }}>{[0, 1, 2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: T.accent, animation: `dotP 1.4s ease ${i * 0.2}s infinite` }} />)}</div>}
             <div ref={chatRef} /></div>
         </div>
         {/* Input fijo justo encima del nav flotante (nav: bottom 16px + ~62px alto = 78px) */}
-        <div style={{ position: "fixed", bottom: 84, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, padding: "0 16px", zIndex: 50 }}>
+        <div style={{ position: "fixed", bottom: 88, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, padding: "0 16px", zIndex: 50 }}>
           {quickM && aiMsgs.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 4, paddingBottom: 4 }}>{QQS.slice(0, 4).map((q, i) => <button key={i} onClick={() => askAI(q)} style={{ padding: "4px 8px", borderRadius: 10, background: T.card, border: `1px solid ${T.border}`, fontSize: 10, color: T.soft, cursor: "pointer" }}>{q}</button>)}</div>}
           <div style={{ padding: "8px 0 10px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 6, background: T.bg }}>
             <input value={aiIn} onChange={e => setAiIn(e.target.value)} onKeyDown={e => e.key === "Enter" && askAI()} placeholder="Pregunta..." style={{ flex: 1, padding: "11px 14px", borderRadius: 16, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, outline: "none" }} />
