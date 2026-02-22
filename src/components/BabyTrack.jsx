@@ -523,14 +523,14 @@ DATOS DE HOY:
 - Score del día: ${dailyScore}/100
 
 REGLAS:
-1. Respuestas CORTAS: máximo 60 palabras. Directo al punto.
-2. NUNCA uses markdown, negritas, asteriscos ni listas con *. Solo texto plano en párrafo.
-3. Si preguntan algo médico preocupante, di "consulta al pediatra" sin dramatizar.
-4. Basa tus respuestas en guías AAP/OMS pero NO cites fuentes explícitamente a menos que te pregunten.
-5. Usa los datos del día para contextualizar tu respuesta.
-6. Tono: cálido, tranquilo, como un pediatra de confianza. Apto para abuelos y papás.
+1. LONGITUD: Máximo 3-4 oraciones. Directo al punto. No repitas la pregunta.
+2. EVIDENCIA: Menciona brevemente la fuente (AAP, OMS, CDC) cuando des una recomendación. Ejemplo: "Según la AAP, a los 5 meses..."
+3. DATOS: Usa los datos del día para contextualizar. Si hay tomas registradas, refiérete a ellas. Si no hay datos, dilo brevemente.
+4. FORMATO: Solo texto plano en párrafo. NUNCA uses negritas (**), asteriscos (*), listas, bullets, ni markdown de ningún tipo.
+5. TONO: Cálido pero profesional. Como un pediatra de confianza hablando cara a cara. Apto para abuelos y papás primerizos.
+6. URGENCIAS: Si algo suena preocupante, di "consulta al pediatra" sin dramatizar.
 7. Responde en español.
-8. No inventes datos ni porcentajes.`;
+8. No inventes datos, porcentajes ni estudios.`;
 
     const contents = [
       ...aiMsgs.slice(-20).map(m => ({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.text }] })),
@@ -1240,7 +1240,7 @@ html,body{background:${T.bg};margin:0;padding:0;min-height:100%}`;
         </div>
 
         {/* Área de mensajes */}
-        <div style={{ paddingTop: 72, paddingBottom: 148, paddingLeft: 16, paddingRight: 16, display: "flex", flexDirection: "column", gap: 8, minHeight: "100dvh", overflowY: "auto" }}>
+        <div style={{ paddingTop: 72, paddingBottom: 180, paddingLeft: 16, paddingRight: 16, display: "flex", flexDirection: "column", gap: 8, minHeight: "100dvh", overflowY: "auto" }}>
           {/* Estado vacío */}
           {aiMsgs.length === 0 && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, paddingTop: 40, paddingBottom: 20 }}>
@@ -1289,17 +1289,17 @@ html,body{background:${T.bg};margin:0;padding:0;min-height:100%}`;
         </div>
 
         {/* Input fijo — justo encima del nav */}
-        <div style={{ position: "fixed", bottom: 68, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, zIndex: 55, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", background: dark ? "rgba(12,12,18,0.82)" : "rgba(250,250,247,0.82)", borderTop: `1px solid ${T.border}`, padding: "8px 16px 10px" }}>
+        <div style={{ position: "fixed", bottom: 85, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, zIndex: 55, background: dark ? "rgba(12,12,18,0.96)" : "rgba(250,250,247,0.96)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", borderTop: `1px solid ${dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)"}`, padding: "8px 16px 10px" }}>
           {/* Quick chips scrolleables */}
           {quickM && (
-            <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 8, scrollbarWidth: "none", msOverflowStyle: "none" }}>
+            <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 8, scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
               {QQS.map((q, i) => (
-                <button key={i} onClick={() => askAI(q)} style={{ flexShrink: 0, padding: "5px 12px", borderRadius: 20, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.72)", border: `1px solid ${T.border}`, fontSize: 11, color: T.text, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>{q}</button>
+                <button key={i} onClick={() => askAI(q)} style={{ flexShrink: 0, padding: "6px 12px", borderRadius: 20, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", background: dark ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.85)", border: `1px solid ${dark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)"}`, fontSize: 11, color: T.text, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>{q}</button>
               ))}
             </div>
           )}
           {/* Input row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: dark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.72)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderRadius: 28, border: `1px solid ${dark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.85)"}`, padding: "6px 6px 6px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: dark ? "rgba(255,255,255,0.08)" : "#FFFFFF", borderRadius: 28, border: `1.5px solid ${dark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.10)"}`, padding: "6px 6px 6px 16px", boxShadow: dark ? "0 2px 12px rgba(0,0,0,0.4)" : "0 2px 12px rgba(0,0,0,0.08)" }}>
             <input value={aiIn} onChange={e => setAiIn(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && askAI()} placeholder="Escribe tu pregunta..." style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 14, color: T.text, minHeight: 32 }} />
             <button onClick={() => askAI()} disabled={aiL || !aiIn.trim()} style={{ width: 36, height: 36, borderRadius: "50%", background: aiIn.trim() && !aiL ? `linear-gradient(135deg,${T.accent},#D4623C)` : T.border, border: "none", cursor: aiIn.trim() && !aiL ? "pointer" : "default", color: "#fff", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>↑</button>
           </div>
