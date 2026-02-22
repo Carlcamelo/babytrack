@@ -204,11 +204,6 @@ export default function BabyTrack({ auth, data }) {
   const [invPerms, setInvPerms] = useState([...ROLE_DEFAULTS.cuidador]);
   const [invStep, setInvStep] = useState(0); // 0=form, 1=perms, 2=done
   const [editM, setEditM] = useState(null);
-  const [cropSrc, setCropSrc] = useState(null);
-  const [cropScale, setCropScale] = useState(1);
-  const [cropOx, setCropOx] = useState(0);
-  const [cropOy, setCropOy] = useState(0);
-  const cropCanvasRef = useRef(null);
   const chatRef = useRef(null);
   const fileRef = useRef(null);
   const [fSubtype, setFSubtype] = useState("formula"); // nursing | pumped | formula | mixed
@@ -452,28 +447,27 @@ export default function BabyTrack({ auth, data }) {
   const handlePhoto = e => {
     const file = e.target.files?.[0]; if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => { if (typeof ev.target?.result === "string") { setCropSrc(ev.target.result); setCropScale(1); setCropOx(0); setCropOy(0); } };
+    reader.onload = ev => {
+      if (typeof ev.target?.result !== "string") return;
+      const img = new Image();
+      img.onload = () => {
+        const sz = 200;
+        const canvas = document.createElement("canvas");
+        canvas.width = sz; canvas.height = sz;
+        const ctx = canvas.getContext("2d");
+        // Cover: escala para cubrir el cuadrado, luego recorta al centro
+        const scale = Math.max(sz / img.width, sz / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        const dx = (sz - w) / 2;
+        const dy = (sz - h) / 2;
+        ctx.drawImage(img, dx, dy, w, h);
+        setPhoto(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.src = ev.target.result;
+    };
     reader.readAsDataURL(file);
     if (fileRef.current) fileRef.current.value = "";
-  };
-  const saveCrop = () => {
-    if (!cropSrc) return;
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const sz = 200; canvas.width = sz; canvas.height = sz;
-      const ctx = canvas.getContext("2d");
-      const cover = Math.max(sz / img.width, sz / img.height);
-      const iw = img.width * cover * cropScale;
-      const ih = img.height * cover * cropScale;
-      const dx = (sz - iw) / 2 + (cropOx / 50) * (iw - sz) * -0.5;
-      const dy = (sz - ih) / 2 + (cropOy / 50) * (ih - sz) * -0.5;
-      ctx.beginPath(); ctx.arc(sz / 2, sz / 2, sz / 2, 0, Math.PI * 2); ctx.clip();
-      ctx.drawImage(img, dx, dy, iw, ih);
-      setPhoto(canvas.toDataURL("image/jpeg", 0.8));
-      setCropSrc(null);
-    };
-    img.src = cropSrc;
   };
 
   const finOb = async () => { setOb(true); await data.saveBaby({ name: prof.name, gender: prof.gender, birth_date: prof.birthDate || null, age_range: prof.ageRange, photo_url: photo }); await auth.updateProfile({ name: cu.name, family_role: cu.familyRole }); setMem([{ id: Date.now(), name: cu.name, role: "admin", familyRole: cu.familyRole, perms: ROLE_DEFAULTS.admin, at: new Date().toISOString() }]); };
@@ -601,40 +595,10 @@ REGLAS:
 button{-webkit-tap-highlight-color:transparent;transition:transform 0.1s}button:active{transform:scale(0.96)}
 html,body{background:${T.bg};margin:0;padding:0;min-height:100%}`;
 
-  // ══ CROP MODAL (slider-only, no drag issues) ══
-  const cropModal = cropSrc ? (
-    <div style={{ position: "fixed", inset: 0, zIndex: 3e3, background: "rgba(0,0,0,0.94)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <p style={{ color: "#fff", fontSize: 17, fontWeight: 800, marginBottom: 6 }}>Ajusta la foto</p>
-      <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginBottom: 16 }}>Usa los controles para encuadrar</p>
-      <div style={{ width: 200, height: 200, borderRadius: "50%", overflow: "hidden", border: "3px solid rgba(255,255,255,0.2)", background: "#111", position: "relative" }}>
-        <img src={cropSrc} alt="" draggable={false} style={{ position: "absolute", left: "50%", top: "50%", transform: `translate(calc(-50% + ${cropOx}px), calc(-50% + ${cropOy}px)) scale(${cropScale})`, minWidth: 200, minHeight: 200, width: "auto", height: "auto", maxWidth: "none", maxHeight: "none", pointerEvents: "none" }} />
-      </div>
-      <div style={{ width: "100%", maxWidth: 260, marginTop: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-          <span style={{ color: "#fff", fontSize: 11, width: 30 }}>Zoom</span>
-          <input type="range" min="1" max="3" step="0.05" value={cropScale} onChange={e => setCropScale(+e.target.value)} style={{ flex: 1, accentColor: T.accent }} />
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-          <span style={{ color: "#fff", fontSize: 11, width: 30 }}>← →</span>
-          <input type="range" min="-60" max="60" step="1" value={cropOx} onChange={e => setCropOx(+e.target.value)} style={{ flex: 1, accentColor: T.accent }} />
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ color: "#fff", fontSize: 11, width: 30 }}>↑ ↓</span>
-          <input type="range" min="-60" max="60" step="1" value={cropOy} onChange={e => setCropOy(+e.target.value)} style={{ flex: 1, accentColor: T.accent }} />
-        </div>
-      </div>
-      <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-        <button onClick={() => setCropSrc(null)} style={{ padding: "12px 24px", borderRadius: 16, background: "rgba(255,255,255,0.1)", color: "#fff", border: "1px solid rgba(255,255,255,0.15)", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>Cancelar</button>
-        <button onClick={saveCrop} style={{ padding: "12px 24px", borderRadius: 16, background: `linear-gradient(135deg,${T.accent},#D4623C)`, color: "#fff", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>Guardar ✓</button>
-      </div>
-    </div>
-  ) : null;
-
   // ══ ONBOARDING ══
   if (!ob) return (
     <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: dark ? "linear-gradient(-45deg,#1A1020,#0F1A2A,#1A1525,#0A1520)" : "linear-gradient(-45deg,#FEF0EB,#DBEAFE,#FDE8F0,#E0E7FF)", backgroundSize: "400% 400%", animation: "gradMove 8s ease infinite", fontFamily: "'Nunito',system-ui", color: T.text, padding: 24, display: "flex", flexDirection: "column", justifyContent: "center" }}>
       <style>{css}</style>
-      {cropModal}
       <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
       <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>{[0, 1, 2].map(i => <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= obS ? T.accent : "rgba(128,128,128,0.3)", transition: "background 0.3s" }} />)}</div>
 
@@ -729,9 +693,6 @@ html,body{background:${T.bg};margin:0;padding:0;min-height:100%}`;
 
       {ok && <div style={{ position: "fixed", inset: 0, zIndex: 2e3, display: "flex", alignItems: "center", justifyContent: "center", background: dark ? "rgba(12,12,18,0.95)" : "rgba(250,250,247,0.95)", backdropFilter: "blur(8px)", animation: "scaleIn 0.3s ease" }}>
         <div style={{ textAlign: "center" }}><div style={{ width: 70, height: 70, borderRadius: "50%", background: T.ok, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: 28, color: "#fff" }}>✓</div><p style={{ fontSize: 17, fontWeight: 800 }}>{okM}</p></div></div>}
-
-      {/* CROP MODAL */}
-      {cropModal}
 
       {/* HOME */}
       {view === "home" && !sub && <div style={{ padding: "14px 16px 100px", animation: "fadeUp 0.4s ease" }}>
