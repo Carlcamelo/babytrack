@@ -1058,9 +1058,32 @@ html,body{background:${T.bg};margin:0;padding:0;min-height:100%}`;
           {m.role !== "admin" && <><button onClick={() => setEditM(m)} style={{ padding: "4px 8px", borderRadius: 8, background: T.card, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 10, fontWeight: 700, color: T.soft }}>✏️</button>
             <button onClick={() => remMem(m.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "#EF4444", padding: 2 }}>✕</button></>}</div>)}
 
-        {inv.filter(i => i.status === "pending").length > 0 && <><SL>Pendientes</SL>{inv.filter(i => i.status === "pending").map(x => <div key={x.id} style={{ ...CS, marginBottom: 5, padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 18 }}>📩</span><div style={{ flex: 1 }}><p style={{ fontSize: 13, fontWeight: 700 }}>{x.name}</p><p style={{ fontSize: 10, color: T.soft }}>Código: <strong>{x.code}</strong></p></div>
-          </div>)}</>}
+        {inv.length > 0 && <><SL>Invitaciones</SL>{inv.map(x => (
+          <div key={x.id} style={{ ...CS, marginBottom: 5, padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 18 }}>{x.status === "done" ? "✅" : "📩"}</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 700 }}>{x.name}</p>
+              {x.status === "done"
+                ? <p style={{ fontSize: 10, color: T.ok, fontWeight: 700 }}>Aceptada ✓</p>
+                : <p style={{ fontSize: 10, color: T.soft }}>Pendiente · Código: <strong style={{ letterSpacing: 1 }}>{x.code}</strong></p>}
+            </div>
+            {x.status === "pending" && (
+              <button
+                onClick={() => {
+                  const msg = `¡Hola ${x.name}! Te invito a BabyTrack para seguir el crecimiento del bebé juntos 👶\n\nDescarga la app y usa este código para unirte:\n🎟 *${x.code}*\n\nhttps://babytrack.vercel.app`;
+                  if (navigator.share) {
+                    navigator.share({ text: msg }).catch(() => {});
+                  } else if (navigator.clipboard) {
+                    navigator.clipboard.writeText(msg).then(() => { setOkM("Copiado ✓"); setOk(true); setTimeout(() => setOk(false), 900); });
+                  } else {
+                    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+                  }
+                }}
+                style={{ flexShrink: 0, padding: "5px 10px", borderRadius: 10, background: T.accentL, border: `1px solid ${T.accent}44`, cursor: "pointer", fontSize: 11, fontWeight: 700, color: T.accent }}
+              >Reenviar 📤</button>
+            )}
+          </div>
+        ))}</>}
 
         <div style={{ ...CS, padding: 14, marginTop: 12 }}>
           <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>➕ Invitar familiar</p>
