@@ -161,6 +161,7 @@ export default function BabyTrack({ auth, data }) {
   const [view, setView] = useState("home");
   const [sub, setSub] = useState(null);
   const [prof, setProf] = useState(data.baby ? { name: data.baby.name, ageRange: data.baby.age_range || "3-6 meses", gender: data.baby.gender || "female", birthDate: data.baby.birth_date || "" } : { name: "", ageRange: "3-6 meses", gender: "female", birthDate: "" });
+  const [babyContext, setBabyContext] = useState(data.baby?.context || "");
   const [photo, setPhoto] = useState(data.baby?.photo_url || null);
   // Entries come from Supabase via data prop — mapped to local format
   const mapEntry = e => ({ id: e.id, type: e.type, ts: e.recorded_at, by: e.recorded_by, ...e.data });
@@ -229,9 +230,9 @@ export default function BabyTrack({ auth, data }) {
     }
     // Save baby profile to Supabase
     if (ob && data.saveBaby) {
-      data.saveBaby({ name: prof.name, gender: prof.gender, birth_date: prof.birthDate || null, age_range: prof.ageRange, photo_url: photo });
+      data.saveBaby({ name: prof.name, gender: prof.gender, birth_date: prof.birthDate || null, age_range: prof.ageRange, photo_url: photo, context: babyContext });
     }
-  }, [prof, photo]);
+  }, [prof, photo, babyContext]);
 
   // Sleep timer
   useEffect(() => {
@@ -470,7 +471,7 @@ export default function BabyTrack({ auth, data }) {
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  const finOb = async () => { setOb(true); await data.saveBaby({ name: prof.name, gender: prof.gender, birth_date: prof.birthDate || null, age_range: prof.ageRange, photo_url: photo }); await auth.updateProfile({ name: cu.name, family_role: cu.familyRole }); setMem([{ id: Date.now(), name: cu.name, role: "admin", familyRole: cu.familyRole, perms: ROLE_DEFAULTS.admin, at: new Date().toISOString() }]); };
+  const finOb = async () => { setOb(true); await data.saveBaby({ name: prof.name, gender: prof.gender, birth_date: prof.birthDate || null, age_range: prof.ageRange, photo_url: photo, context: babyContext }); await auth.updateProfile({ name: cu.name, family_role: cu.familyRole }); setMem([{ id: Date.now(), name: cu.name, role: "admin", familyRole: cu.familyRole, perms: ROLE_DEFAULTS.admin, at: new Date().toISOString() }]); };
   const resetAll = async () => { if (confirm("¿Cerrar sesión?")) { await auth.signOut(); } };
 
   const exportCSV = () => {
@@ -507,6 +508,7 @@ export default function BabyTrack({ auth, data }) {
     const systemPrompt = `Eres un asistente pediátrico cálido y confiable para familias con bebés de 0-12 meses.
 
 BEBÉ: ${prof.name || "el bebé"}, ${prof.gender === "female" ? "niña" : "niño"}, nacido el ${prof.birthDate || "fecha no registrada"}, edad actual: ${prof.birthDate ? fmtAge(prof.birthDate) : prof.ageRange}.
+CONTEXTO DEL BEBÉ: ${babyContext.trim() || "Sin contexto adicional proporcionado."}
 QUIEN PREGUNTA: ${cu.name} (${FAMILY_ROLES.find(r => r.id === cu.familyRole)?.l || "cuidador"}).
 
 DATOS DE HOY:
@@ -600,7 +602,7 @@ html,body{background:${T.bg};margin:0;padding:0;min-height:100%}`;
     <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: dark ? "linear-gradient(-45deg,#1A1020,#0F1A2A,#1A1525,#0A1520)" : "linear-gradient(-45deg,#FEF0EB,#DBEAFE,#FDE8F0,#E0E7FF)", backgroundSize: "400% 400%", animation: "gradMove 8s ease infinite", fontFamily: "'Nunito',system-ui", color: T.text, padding: 24, display: "flex", flexDirection: "column", justifyContent: "center" }}>
       <style>{css}</style>
       <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
-      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>{[0, 1, 2].map(i => <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= obS ? T.accent : "rgba(128,128,128,0.3)", transition: "background 0.3s" }} />)}</div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>{[0, 1, 2, 3].map(i => <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= obS ? T.accent : "rgba(128,128,128,0.3)", transition: "background 0.3s" }} />)}</div>
 
       {obS === 0 && <div style={{ textAlign: "center", animation: "fadeUp 0.5s ease" }}>
         <div style={{ fontSize: 80, marginBottom: 12, animation: "float 3s ease infinite" }}>👶</div>
@@ -670,6 +672,20 @@ html,body{background:${T.bg};margin:0;padding:0;min-height:100%}`;
       </div>}
 
       {obS === 2 && <div style={{ animation: "fadeUp 0.4s ease" }}>
+        <h2 style={{ fontSize: 24, fontWeight: 900, marginBottom: 6 }}>Cuéntanos sobre tu bebé</h2>
+        <p style={{ fontSize: 13, color: T.soft, marginBottom: 16 }}>Esta información ayuda a la IA a darte respuestas más personalizadas</p>
+        <textarea
+          value={babyContext}
+          onChange={e => setBabyContext(e.target.value)}
+          placeholder={`Ejemplo:\n• Nació a las 35 semanas (prematuro)\n• Tiene reflujo, usa Gaviscon\n• Lactancia mixta desde el mes 2\n• Alergia a proteína de leche de vaca (APLV)\n• Vive en Bogotá (altitud ~2600m)`}
+          rows={7}
+          style={{ width: "100%", padding: "14px 16px", borderRadius: 16, border: `2px solid ${T.border}`, fontSize: 14, outline: "none", fontWeight: 600, background: T.card + "DD", marginBottom: 16, resize: "none", lineHeight: 1.6, color: T.text }}
+        />
+        <button onClick={() => setObS(3)} style={{ width: "100%", padding: 16, borderRadius: 20, background: `linear-gradient(135deg,${T.accent},#D4623C)`, color: "#fff", border: "none", cursor: "pointer", fontSize: 17, fontWeight: 800, marginBottom: 10 }}>Siguiente →</button>
+        <button onClick={() => setObS(3)} style={{ width: "100%", padding: 12, borderRadius: 16, background: "transparent", border: `2px solid ${T.border}`, cursor: "pointer", fontSize: 14, fontWeight: 700, color: T.soft }}>Saltar por ahora</button>
+      </div>}
+
+      {obS === 3 && <div style={{ animation: "fadeUp 0.4s ease" }}>
         <h2 style={{ fontSize: 24, fontWeight: 900, marginBottom: 6 }}>¿Quién eres tú?</h2>
         <p style={{ fontSize: 13, color: T.soft, marginBottom: 14 }}>Tu nombre aparece en cada registro</p>
         <input value={cu.name === "Yo" ? "" : cu.name} onChange={e => setCu(p => ({ ...p, name: e.target.value || "Yo" }))} placeholder="Tu nombre" autoFocus style={{ width: "100%", padding: "14px 16px", borderRadius: 16, border: `2px solid ${T.border}`, fontSize: 18, outline: "none", fontWeight: 700, background: T.card + "DD", marginBottom: 14 }} />
@@ -1325,6 +1341,17 @@ html,body{background:${T.bg};margin:0;padding:0;min-height:100%}`;
           {prof.birthDate && <p style={{ fontSize: 13, color: T.accent, fontWeight: 700 }}>🎂 {fmtAge(prof.birthDate)} · {prof.ageRange}</p>}
           {!prof.birthDate && <><p style={{ fontSize: 11, color: T.soft, marginBottom: 6 }}>O rango manual:</p><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
           {["0-3 meses", "3-6 meses", "6-9 meses", "9-12 meses"].map(a => <button key={a} onClick={() => setProf(p => ({ ...p, ageRange: a }))} style={{ padding: 10, borderRadius: 12, cursor: "pointer", background: prof.ageRange === a ? T.accentL : T.card, border: `2px solid ${prof.ageRange === a ? T.accent : T.border}`, fontSize: 12, fontWeight: prof.ageRange === a ? 800 : 600, color: prof.ageRange === a ? T.accent : T.text }}>{a}</button>)}</div></>}</div>
+        <div style={{ ...CS, padding: 14, marginBottom: 8 }}>
+          <SL>Contexto del bebé (para la IA)</SL>
+          <p style={{ fontSize: 11, color: T.soft, marginBottom: 8 }}>Condiciones especiales, alergias, medicamentos, prematuridad, etc. La IA usa esto para personalizar sus respuestas.</p>
+          <textarea
+            value={babyContext}
+            onChange={e => setBabyContext(e.target.value)}
+            placeholder={`Ej: Nació a las 35 semanas. Tiene reflujo, usa Gaviscon. Lactancia mixta. Alergia a APLV.`}
+            rows={4}
+            style={{ width: "100%", padding: "10px 12px", borderRadius: 12, border: `1.5px solid ${T.border}`, background: T.card, fontSize: 13, outline: "none", fontWeight: 600, resize: "none", lineHeight: 1.6, color: T.text, fontFamily: "inherit" }}
+          />
+        </div>
         <div style={{ ...CS, padding: 14, marginBottom: 8 }}><SL>Tema</SL><button onClick={() => setDark(!dark)} style={{ width: "100%", padding: 11, borderRadius: 12, background: T.card, border: `1.5px solid ${T.border}`, cursor: "pointer", fontSize: 13, fontWeight: 700 }}>{dark ? "☀️ Claro" : "🌙 Oscuro"}</button></div>
         {hp("export_data") && <div style={{ ...CS, padding: 14, marginBottom: 8 }}><SL>Exportar</SL><button onClick={exportCSV} style={{ width: "100%", padding: 11, borderRadius: 12, background: T.accent, color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>📥 CSV ({ent.length} registros)</button></div>}
         <div style={{ ...CS, padding: 14 }}><SL>Datos</SL><p style={{ fontSize: 12, color: T.soft, marginBottom: 6 }}>📊 {ent.length} registros · 📋 {qs.length} preguntas · 🌟 {msDone.length} hitos · 💬 {aiMsgs.length} IA · 👥 {mem.length} miembros</p>
