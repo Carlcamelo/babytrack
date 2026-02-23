@@ -783,17 +783,17 @@ html,body{background:${T.bg};margin:0;padding:0;min-height:100%}`;
 
         {/* Resumen del día — 3 tinted glass cards */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
-          <div style={{ ...GL(dark ? "rgba(249,168,212,0.08)" : "rgba(253,242,248,0.75)", 18), padding: "14px 10px", textAlign: "center" }}>
+          <div onClick={() => hp("reg_feed") && setSub("feed")} style={{ ...GL(dark ? "rgba(249,168,212,0.08)" : "rgba(253,242,248,0.75)", 18), padding: "14px 10px", textAlign: "center", cursor: hp("reg_feed") ? "pointer" : "default" }}>
             <p style={{ fontSize: 26, fontWeight: 900, color: feedStatus === "ok" ? T.ok : feedStatus === "warn" ? "#F59E0B" : T.text, lineHeight: 1 }}>{tOz}</p>
             <p style={{ fontSize: 11, fontWeight: 700, color: T.soft, marginTop: 3 }}>oz hoy</p>
             <p style={{ fontSize: 10, color: T.soft }}>{goals.ozLabel}</p>
           </div>
-          <div style={{ ...GL(dark ? "rgba(125,211,252,0.07)" : "rgba(239,246,255,0.75)", 18), padding: "14px 10px", textAlign: "center" }}>
+          <div onClick={() => hp("reg_diaper") && setSub("diaper")} style={{ ...GL(dark ? "rgba(125,211,252,0.07)" : "rgba(239,246,255,0.75)", 18), padding: "14px 10px", textAlign: "center", cursor: hp("reg_diaper") ? "pointer" : "default" }}>
             <p style={{ fontSize: 26, fontWeight: 900, color: wetStatus === "ok" ? T.ok : wetStatus === "warn" ? "#F59E0B" : T.text, lineHeight: 1 }}>{tWet}</p>
             <p style={{ fontSize: 11, fontWeight: 700, color: T.soft, marginTop: 3 }}>💧 pipí</p>
             <p style={{ fontSize: 10, color: T.soft }}>{goals.wetLabel}</p>
           </div>
-          <div style={{ ...GL(dark ? "rgba(196,181,253,0.08)" : "rgba(245,243,255,0.75)", 18), padding: "14px 10px", textAlign: "center" }}>
+          <div onClick={() => hp("reg_sleep") && setSub("sleep")} style={{ ...GL(dark ? "rgba(196,181,253,0.08)" : "rgba(245,243,255,0.75)", 18), padding: "14px 10px", textAlign: "center", cursor: hp("reg_sleep") ? "pointer" : "default" }}>
             <p style={{ fontSize: 26, fontWeight: 900, color: sleepStatus === "ok" ? T.ok : sleepStatus === "warn" ? "#F59E0B" : T.text, lineHeight: 1 }}>{tSlH}</p>
             <p style={{ fontSize: 11, fontWeight: 700, color: T.soft, marginTop: 3 }}>h sueño</p>
             <p style={{ fontSize: 10, color: T.soft }}>{goals.sleepLabel}</p>
@@ -987,7 +987,9 @@ html,body{background:${T.bg};margin:0;padding:0;min-height:100%}`;
           <p style={{ fontSize: 13, color: T.soft }}>{slpA.type === "nap" ? "💤 Siesta" : "🌙 Noche"}</p>
           <p style={{ fontSize: 60, fontWeight: 900, color: T.accent, letterSpacing: -2 }}>{fSec(slpE)}</p>
           <p style={{ fontSize: 12, color: T.soft }}>Desde {fmt(slpA.at)}</p></div>
-          <button onClick={stopSlp} style={{ width: "100%", padding: 16, borderRadius: 22, background: "linear-gradient(135deg,#EF4444,#DC2626)", color: "#fff", border: "none", cursor: "pointer", fontSize: 17, fontWeight: 800 }}>⏹ Detener y Guardar</button></>}</div>}
+          <button onClick={stopSlp} style={{ width: "100%", padding: 16, borderRadius: 22, background: "linear-gradient(135deg,#EF4444,#DC2626)", color: "#fff", border: "none", cursor: "pointer", fontSize: 17, fontWeight: 800, marginBottom: 10 }}>⏹ Detener y Guardar</button>
+          <button onClick={() => setSub(null)} style={{ width: "100%", padding: 13, borderRadius: 18, background: "transparent", border: `1.5px solid ${T.border}`, cursor: "pointer", fontSize: 14, fontWeight: 700, color: T.soft }}>← Volver (el timer sigue corriendo)</button>
+        </>}</div>}
 
       {/* TEMP */}
       {sub === "temp" && <div style={{ padding: "14px 16px 40px", animation: "fadeUp 0.3s ease", background: dark ? "linear-gradient(180deg,#1A1010 0%,#0C0C12 100%)" : "linear-gradient(180deg,#FEE2E2 0%,#FAFAF7 30%)", minHeight: "100vh" }}>
